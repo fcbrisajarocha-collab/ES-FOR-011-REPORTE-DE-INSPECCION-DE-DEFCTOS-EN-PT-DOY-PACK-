@@ -214,79 +214,143 @@
 
   <!-- DASHBOARD -->
   <div class="view" id="view-dashboard">
-    <div class="panel">
-      <div class="filters">
-        <div class="field">
-          <label>Desde</label>
-          <input type="date" id="dash-desde">
+    <div class="panel dash-print-hide">
+      <div class="filters" style="align-items:center;">
+        <div class="field" style="min-width:150px;flex:0 0 auto;">
+          <label>Fecha de referencia</label>
+          <input type="date" id="dash-fecha-ref">
         </div>
-        <div class="field">
-          <label>Hasta</label>
-          <input type="date" id="dash-hasta">
+        <div class="field" style="min-width:auto;flex:0 0 auto;">
+          <label>Período</label>
+          <div style="display:flex;gap:4px;">
+            <button class="btn-period active" id="pp-dia" data-period="dia">Día</button>
+            <button class="btn-period" id="pp-semana" data-period="semana">Semana</button>
+            <button class="btn-period" id="pp-mes" data-period="mes">Mes</button>
+            <button class="btn-period" id="pp-año" data-period="año">Año</button>
+            <button class="btn-period" id="pp-rango" data-period="rango">Rango</button>
+          </div>
+        </div>
+        <div class="field" id="rango-wrap" style="display:none;min-width:auto;flex:0 0 auto;">
+          <label>Del — al</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="date" id="dash-rango-ini" style="width:140px;">
+            <span style="color:var(--ink-soft);">–</span>
+            <input type="date" id="dash-rango-fin" style="width:140px;">
+          </div>
         </div>
         <div class="field">
           <label>Presentación</label>
           <select id="dash-presentacion"><option value="">Todas</option></select>
         </div>
-        <button class="btn btn-ghost" id="btn-limpiar-filtros">Limpiar filtros</button>
+        <button class="btn btn-ghost" id="btn-limpiar-filtros">Limpiar</button>
+        <button class="btn btn-primary" id="btn-imprimir" style="margin-left:auto;">Imprimir / PDF</button>
       </div>
     </div>
 
-    <div class="grid grid-4" style="margin-top:18px;">
-      <div class="kpi">
-        <div class="kpi-label">Producción total</div>
-        <div class="kpi-value" id="kpi-produccion">0</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Piezas con defecto</div>
-        <div class="kpi-value" id="kpi-defectos">0</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">% Defectuoso global</div>
-        <div class="kpi-value" id="kpi-pct">0%</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Turnos registrados</div>
-        <div class="kpi-value" id="kpi-turnos">0</div>
-      </div>
-    </div>
+    <div id="dash-print-area">
+      <div class="panel-title" id="dash-period-label" style="font-size:15px;color:var(--ink-soft);font-weight:600;margin:2px 0 14px;font-family:'Inter',sans-serif;text-transform:uppercase;letter-spacing:.04em;"></div>
 
-    <div class="grid grid-2" style="margin-top:18px;">
-      <div class="panel">
-        <div class="panel-title">Defectos por tipo</div>
-        <p class="panel-hint">Piezas totales acumuladas por tipo de defecto, en el rango filtrado.</p>
-        <div class="chart-box"><canvas id="chart-tipos"></canvas></div>
+      <!-- HERO METRIC -->
+      <div class="hero-metric">
+        <div>
+          <div class="hero-label">% Defectuoso del período</div>
+          <div class="hero-value" id="hero-pct">0.00%</div>
+          <div class="hero-sub" id="hero-sub">0 de 0 piezas con defecto</div>
+        </div>
+        <div class="hero-side">
+          <div class="hero-mini"><span id="hero-produccion">0</span><small>Producción total</small></div>
+          <div class="hero-mini"><span id="hero-turnos">0</span><small>Turnos registrados</small></div>
+          <div class="hero-mini"><span id="hero-peor">—</span><small>Presentación con más defecto</small></div>
+        </div>
       </div>
-      <div class="panel">
-        <div class="panel-title">% Defectuoso por presentación</div>
-        <p class="panel-hint">Comparación del índice de defecto entre presentaciones de Doy Pack.</p>
-        <div class="chart-box"><canvas id="chart-presentacion"></canvas></div>
-      </div>
-    </div>
 
-    <div class="panel" style="margin-top:18px;">
-      <div class="panel-title">Tendencia diaria de % defectuoso</div>
-      <p class="panel-hint">Evolución del índice de defecto día a día en el rango filtrado.</p>
-      <div class="chart-box" style="height:230px;"><canvas id="chart-tendencia"></canvas></div>
-      <div class="legend-row" id="tendencia-legend"></div>
-    </div>
-
-    <div class="panel" style="margin-top:18px;">
-      <div class="panel-title">Detalle de registros</div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr><th>Fecha</th><th>Turno</th><th>Presentación</th><th>Producción</th><th>Sellado</th><th>Codificado</th><th>Fuga</th><th>Peso</th><th>Total def.</th><th>% Def.</th><th>Realizó</th></tr>
-          </thead>
-          <tbody id="tbl-detalle"></tbody>
-        </table>
+      <div class="grid grid-4" style="margin-top:16px;">
+        <div class="kpi">
+          <div class="kpi-label">Producción total</div>
+          <div class="kpi-value" id="kpi-produccion">0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Piezas con defecto</div>
+          <div class="kpi-value" id="kpi-defectos">0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">% Defectuoso global</div>
+          <div class="kpi-value" id="kpi-pct">0%</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Turnos registrados</div>
+          <div class="kpi-value" id="kpi-turnos">0</div>
+        </div>
       </div>
-      <div class="empty" id="detalle-empty" style="display:none;">No hay registros en el rango seleccionado.</div>
+
+      <div class="grid grid-2" style="margin-top:18px;">
+        <div class="panel">
+          <div class="panel-title">Defectos por tipo</div>
+          <p class="panel-hint">Piezas totales acumuladas por tipo de defecto, en el período.</p>
+          <div class="chart-box"><canvas id="chart-tipos"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">% Defectuoso por presentación</div>
+          <p class="panel-hint">Comparación del índice de defecto entre presentaciones de Doy Pack.</p>
+          <div class="chart-box"><canvas id="chart-presentacion"></canvas></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:18px;">
+        <div class="panel-title">Ranking de presentaciones</div>
+        <p class="panel-hint">Ordenadas de mayor a menor % defectuoso en el período.</p>
+        <div id="ranking-presentacion"></div>
+      </div>
+
+      <div class="panel" style="margin-top:18px;">
+        <div class="panel-title" id="tendencia-title">Tendencia de % defectuoso</div>
+        <p class="panel-hint" id="tendencia-hint">Evolución del índice de defecto en el período, por presentación.</p>
+        <div class="chart-box" style="height:230px;"><canvas id="chart-tendencia"></canvas></div>
+        <div class="legend-row" id="tendencia-legend"></div>
+      </div>
+
+      <div class="panel dash-print-hide" style="margin-top:18px;">
+        <div class="panel-title">Detalle de registros</div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Fecha</th><th>Turno</th><th>Presentación</th><th>Producción</th><th>Sellado</th><th>Codificado</th><th>Fuga</th><th>Peso</th><th>Total def.</th><th>% Def.</th><th>Realizó</th></tr>
+            </thead>
+            <tbody id="tbl-detalle"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="detalle-empty" style="display:none;">No hay registros en el período seleccionado.</div>
+      </div>
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<style>
+  .btn-period{border:1.5px solid var(--line);background:#fff;color:var(--ink-soft);padding:8px 14px;border-radius:8px;font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;cursor:pointer;transition:all .15s;}
+  .btn-period.active{background:var(--coffee);border-color:var(--coffee);color:#fff;}
+  .btn-period:not(.active):hover{border-color:var(--caramel);color:var(--caramel);}
+  .hero-metric{background:linear-gradient(135deg,var(--coffee),#2C1F16);border-radius:16px;padding:26px 28px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;box-shadow:var(--shadow);}
+  .hero-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#E8D9C4;margin-bottom:6px;}
+  .hero-value{font-family:'Fraunces',serif;font-weight:700;font-size:52px;line-height:1;}
+  .hero-sub{font-size:13px;color:#E8D9C4;margin-top:8px;}
+  .hero-side{display:flex;gap:26px;flex-wrap:wrap;}
+  .hero-mini{text-align:center;min-width:100px;}
+  .hero-mini span{display:block;font-family:'Fraunces',serif;font-weight:600;font-size:24px;}
+  .hero-mini small{display:block;font-size:11px;color:#E8D9C4;margin-top:4px;text-transform:uppercase;letter-spacing:.03em;}
+  .rank-row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);}
+  .rank-row:last-child{border-bottom:none;}
+  .rank-name{font-weight:600;font-size:13.5px;min-width:150px;}
+  .rank-bar-wrap{flex:1;background:#F1E9DB;border-radius:6px;height:10px;overflow:hidden;}
+  .rank-bar{height:100%;border-radius:6px;}
+  .rank-pct{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:13px;min-width:60px;text-align:right;}
+  @media print{
+    .dash-print-hide, .topbar .tabs, .brand-eyebrow, .brand-sub { display:none !important; }
+    body{background:#fff;}
+    .panel{box-shadow:none;border:1px solid #ddd;}
+  }
+</style>
 
 <script>
 (function(){
@@ -561,6 +625,58 @@
   });
 
   // ---------- dashboard view ----------
+  const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  function isoWeek(dateStr){
+    const d = new Date(dateStr+'T00:00:00');
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay()||7));
+    const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    return t.getUTCFullYear()+'-W'+String(Math.ceil((((t-y0)/86400000)+1)/7)).padStart(2,'0');
+  }
+
+  let _period = 'dia';
+  let _rangoIni = null, _rangoFin = null;
+
+  function isInPeriod(dateStr, refDate, period){
+    if(!dateStr) return false;
+    if(period === 'rango') return _rangoIni && _rangoFin && dateStr >= _rangoIni && dateStr <= _rangoFin;
+    if(period === 'dia')    return dateStr === refDate;
+    if(period === 'semana') return isoWeek(dateStr) === isoWeek(refDate);
+    if(period === 'mes')    return dateStr.substring(0,7) === refDate.substring(0,7);
+    if(period === 'año')    return dateStr.substring(0,4) === refDate.substring(0,4);
+    return false;
+  }
+
+  function getPeriodLabel(refDate, period){
+    if(period === 'dia')    return 'Día: ' + refDate;
+    if(period === 'semana') return 'Semana ' + isoWeek(refDate).split('-W')[1] + ' · ' + isoWeek(refDate).split('-')[0];
+    if(period === 'mes')    return MESES[Number(refDate.substring(5,7))-1] + ' ' + refDate.substring(0,4);
+    if(period === 'año')    return 'Año ' + refDate.substring(0,4);
+    if(period === 'rango')  return _rangoIni && _rangoFin ? (_rangoIni + ' al ' + _rangoFin) : 'Selecciona un rango';
+    return '';
+  }
+
+  function setPeriod(p){
+    _period = p;
+    document.querySelectorAll('.btn-period').forEach(b=> b.classList.toggle('active', b.dataset.period === p));
+    document.getElementById('rango-wrap').style.display = p === 'rango' ? 'flex' : 'none';
+    refreshAll();
+  }
+  document.querySelectorAll('.btn-period').forEach(btn=>{
+    btn.addEventListener('click', ()=> setPeriod(btn.dataset.period));
+  });
+  document.getElementById('dash-rango-ini').addEventListener('change', ()=>{
+    _rangoIni = document.getElementById('dash-rango-ini').value || null;
+    if(_period === 'rango') refreshAll();
+  });
+  document.getElementById('dash-rango-fin').addEventListener('change', ()=>{
+    _rangoFin = document.getElementById('dash-rango-fin').value || null;
+    if(_period === 'rango') refreshAll();
+  });
+  document.getElementById('dash-fecha-ref').value = todayISO();
+  document.getElementById('btn-imprimir').addEventListener('click', ()=> window.print());
+
   function populatePresentacionFilter(){
     const sel = document.getElementById('dash-presentacion');
     const current = sel.value;
@@ -570,12 +686,10 @@
   }
 
   function filteredRecords(){
-    const desde = document.getElementById('dash-desde').value;
-    const hasta = document.getElementById('dash-hasta').value;
+    const refDate = document.getElementById('dash-fecha-ref').value || todayISO();
     const pres = document.getElementById('dash-presentacion').value;
     return records.filter(r=>{
-      if(desde && r.fecha < desde) return false;
-      if(hasta && r.fecha > hasta) return false;
+      if(!isInPeriod(r.fecha, refDate, _period)) return false;
       if(pres && r.presentacion !== pres) return false;
       return true;
     });
@@ -591,6 +705,55 @@
     pctEl.textContent = pct(p);
     pctEl.className = 'kpi-value ' + (p>0.02 ? 'warn' : 'good');
     document.getElementById('kpi-turnos').textContent = list.length;
+
+    // Hero metric
+    document.getElementById('hero-pct').textContent = pct(p);
+    document.getElementById('hero-sub').textContent = fmt(defectos) + ' de ' + fmt(produccion) + ' piezas con defecto';
+    document.getElementById('hero-produccion').textContent = fmt(produccion);
+    document.getElementById('hero-turnos').textContent = list.length;
+
+    // presentación con mayor % defectuoso
+    const byPres = {};
+    for(const r of list){
+      if(!r.presentacion) continue;
+      if(!byPres[r.presentacion]) byPres[r.presentacion] = {prod:0, def:0};
+      byPres[r.presentacion].prod += Number(r.produccion)||0;
+      byPres[r.presentacion].def += totalDefects(r);
+    }
+    let peor = null, peorPct = -1;
+    Object.keys(byPres).forEach(k=>{
+      const pp = byPres[k].prod>0 ? byPres[k].def/byPres[k].prod : 0;
+      if(pp > peorPct){ peorPct = pp; peor = k; }
+    });
+    document.getElementById('hero-peor').textContent = peor || '—';
+
+    document.getElementById('dash-period-label').textContent = getPeriodLabel(document.getElementById('dash-fecha-ref').value || todayISO(), _period) + (document.getElementById('dash-presentacion').value ? ' · ' + document.getElementById('dash-presentacion').value : '');
+  }
+
+  function refreshRanking(list){
+    const el = document.getElementById('ranking-presentacion');
+    const byPres = {};
+    for(const r of list){
+      if(!r.presentacion) continue;
+      if(!byPres[r.presentacion]) byPres[r.presentacion] = {prod:0, def:0};
+      byPres[r.presentacion].prod += Number(r.produccion)||0;
+      byPres[r.presentacion].def += totalDefects(r);
+    }
+    const rows = Object.keys(byPres).map(k=>({
+      name: k,
+      pct: byPres[k].prod>0 ? byPres[k].def/byPres[k].prod : 0
+    })).sort((a,b)=> b.pct - a.pct);
+    if(!rows.length){ el.innerHTML = '<div class="empty" style="padding:16px;">Sin datos en el período.</div>'; return; }
+    const maxPct = Math.max(...rows.map(r=>r.pct), 0.0001);
+    el.innerHTML = rows.map(r=>{
+      const width = Math.max((r.pct/maxPct)*100, 3);
+      const color = r.pct>0.02 ? '#C0392B' : '#3D7A5C';
+      return `<div class="rank-row">
+        <div class="rank-name">${r.name}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${width}%;background:${color};"></div></div>
+        <div class="rank-pct" style="color:${color};">${pct(r.pct)}</div>
+      </div>`;
+    }).join('');
   }
 
   function refreshChartTipos(list){
@@ -635,8 +798,12 @@
   function refreshChartTendencia(list){
     const byDatePres = {};
     const presSet = new Set();
+    const bucketKey = (fecha)=>{
+      if(_period === 'año') return fecha.substring(0,7); // agrupar por mes dentro del año
+      return fecha; // por día
+    };
     for(const r of list){
-      const key = r.fecha;
+      const key = bucketKey(r.fecha);
       presSet.add(r.presentacion || 'Sin presentación');
       byDatePres[key] = byDatePres[key] || {};
       const pk = r.presentacion || 'Sin presentación';
@@ -645,6 +812,7 @@
       byDatePres[key][pk].def += totalDefects(r);
     }
     const dates = Object.keys(byDatePres).sort();
+    const dateLabels = dates.map(d=> _period==='año' ? MESES[Number(d.substring(5,7))-1].slice(0,3) : d);
     const presList = [...presSet].sort();
     const datasets = presList.map((p,i)=>({
       label: p,
@@ -656,8 +824,10 @@
       backgroundColor: TREND_COLORS[i % TREND_COLORS.length],
       spanGaps: true, tension:.3, pointRadius:3
     }));
+    document.getElementById('tendencia-title').textContent = _period==='año' ? 'Tendencia mensual de % defectuoso' : 'Tendencia de % defectuoso';
+    document.getElementById('tendencia-hint').textContent = _period==='año' ? 'Evolución mes a mes del índice de defecto, por presentación.' : 'Evolución del índice de defecto en el período, por presentación.';
     const ctx = document.getElementById('chart-tendencia').getContext('2d');
-    const data = { labels: dates, datasets };
+    const data = { labels: dateLabels, datasets };
     if(chartTendencia){ chartTendencia.data = data; chartTendencia.update(); }
     else{
       chartTendencia = new Chart(ctx, {
@@ -697,6 +867,7 @@
     populatePresentacionFilter();
     const list = filteredRecords();
     refreshKPIs(list);
+    refreshRanking(list);
     refreshChartTipos(list);
     refreshChartPresentacion(list);
     refreshChartTendencia(list);
@@ -704,14 +875,15 @@
     await refreshRecientes();
   }
 
-  document.getElementById('dash-desde').addEventListener('change', refreshAll);
-  document.getElementById('dash-hasta').addEventListener('change', refreshAll);
+  document.getElementById('dash-fecha-ref').addEventListener('change', refreshAll);
   document.getElementById('dash-presentacion').addEventListener('change', refreshAll);
   document.getElementById('btn-limpiar-filtros').addEventListener('click', ()=>{
-    document.getElementById('dash-desde').value = '';
-    document.getElementById('dash-hasta').value = '';
+    document.getElementById('dash-fecha-ref').value = todayISO();
     document.getElementById('dash-presentacion').value = '';
-    refreshAll();
+    document.getElementById('dash-rango-ini').value = '';
+    document.getElementById('dash-rango-fin').value = '';
+    _rangoIni = null; _rangoFin = null;
+    setPeriod('dia');
   });
 
   // tabs
