@@ -148,10 +148,14 @@
         </div>
       </div>
 
-      <div class="grid grid-2" style="margin-top:4px;">
+      <div class="grid grid-3">
         <div class="field">
-          <label>Producción total del turno (piezas)</label>
-          <input type="number" min="0" id="f-produccion" placeholder="0">
+          <label>Producción neta del turno (piezas buenas)</label>
+          <input type="number" min="0" id="f-produccion-neta" placeholder="0">
+        </div>
+        <div class="field">
+          <label>Producción bruta (calculada)</label>
+          <input type="text" id="f-produccion" readonly placeholder="0" style="background:#F1E9DB;font-weight:700;color:var(--coffee);">
         </div>
         <div class="field">
           <label>Realizó</label>
@@ -203,7 +207,7 @@
       <div class="table-scroll">
         <table>
           <thead>
-            <tr><th>Fecha</th><th>Turno</th><th>Presentación</th><th>Producción</th><th>Defectos</th><th>% Def.</th><th>Realizó</th><th></th></tr>
+            <tr><th>Fecha</th><th>Turno</th><th>Presentación</th><th>Bruta</th><th>Neta</th><th>Defectos</th><th>% Def.</th><th>Realizó</th><th></th></tr>
           </thead>
           <tbody id="tbl-recientes"></tbody>
         </table>
@@ -266,8 +270,12 @@
 
       <div class="grid grid-4" style="margin-top:16px;">
         <div class="kpi">
-          <div class="kpi-label">Producción total</div>
+          <div class="kpi-label">Producción bruta</div>
           <div class="kpi-value" id="kpi-produccion">0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Producción neta</div>
+          <div class="kpi-value" id="kpi-neta">0</div>
         </div>
         <div class="kpi">
           <div class="kpi-label">Piezas con defecto</div>
@@ -277,6 +285,8 @@
           <div class="kpi-label">% Defectuoso global</div>
           <div class="kpi-value" id="kpi-pct">0%</div>
         </div>
+      </div>
+      <div class="grid grid-2" style="margin-top:14px;">
         <div class="kpi">
           <div class="kpi-label">Turnos registrados</div>
           <div class="kpi-value" id="kpi-turnos">0</div>
@@ -314,7 +324,7 @@
         <div class="table-scroll">
           <table>
             <thead>
-              <tr><th>Fecha</th><th>Turno</th><th>Presentación</th><th>Producción</th><th>Sellado</th><th>Codificado</th><th>Fuga</th><th>Peso</th><th>Total def.</th><th>% Def.</th><th>Realizó</th></tr>
+              <tr><th>Fecha</th><th>Turno</th><th>Presentación</th><th>Bruta</th><th>Neta</th><th>Sellado</th><th>Codificado</th><th>Fuga</th><th>Peso</th><th>Total def.</th><th>% Def.</th><th>Realizó</th></tr>
             </thead>
             <tbody id="tbl-detalle"></tbody>
           </table>
@@ -544,6 +554,20 @@
   }
   function totalDefects(r){ return DEFECT_KEYS.reduce((s,k)=> s + (Number(r[k])||0), 0); }
   function pctDef(r){ const p = Number(r.produccion)||0; return p>0 ? totalDefects(r)/p : 0; }
+  function netaDe(r){ return Math.max((Number(r.produccion)||0) - totalDefects(r), 0); }
+
+  function actualizarNeta(){
+    const neta = Number(document.getElementById('f-produccion-neta').value)||0;
+    const d1 = Number(document.getElementById('f-d1').value)||0;
+    const d2 = Number(document.getElementById('f-d2').value)||0;
+    const d3 = Number(document.getElementById('f-d3').value)||0;
+    const d4 = Number(document.getElementById('f-d4').value)||0;
+    const bruta = neta + (d1+d2+d3+d4);
+    document.getElementById('f-produccion').value = fmt(bruta) + ' pzas';
+  }
+  ['f-produccion-neta','f-d1','f-d2','f-d3','f-d4'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', actualizarNeta);
+  });
 
   // ---------- captura view ----------
   const selPresentacion = document.getElementById('f-presentacion');
@@ -566,6 +590,7 @@
         <td>${r.turno}</td>
         <td>${r.presentacion}</td>
         <td>${fmt(r.produccion)}</td>
+        <td>${fmt(netaDe(r))}</td>
         <td>${fmt(totalDefects(r))}</td>
         <td><span class="pill ${p>0.02?'pill-warn':'pill-ok'}">${pct(p)}</span></td>
         <td>${r.realizo||'—'}</td>
@@ -591,7 +616,7 @@
     if(presentacion === '__otra'){
       presentacion = document.getElementById('f-presentacion-otra').value.trim();
     }
-    const produccion = Number(document.getElementById('f-produccion').value)||0;
+    const netaCapturada = Number(document.getElementById('f-produccion-neta').value)||0;
     let realizo = selRealizo.value;
     if(realizo === '__nuevo') realizo = '';
     const obs = document.getElementById('f-obs').value.trim();
@@ -599,10 +624,11 @@
     const d2 = Number(document.getElementById('f-d2').value)||0;
     const d3 = Number(document.getElementById('f-d3').value)||0;
     const d4 = Number(document.getElementById('f-d4').value)||0;
+    const produccion = netaCapturada + (d1+d2+d3+d4); // producción bruta = neta + defectos
 
     if(!fecha){ showToast('Indica la fecha del turno'); return; }
     if(!presentacion){ showToast('Indica la presentación'); return; }
-    if(produccion <= 0){ showToast('Indica la producción total del turno'); return; }
+    if(netaCapturada <= 0){ showToast('Indica la producción neta del turno'); return; }
     if(!realizo){ showToast('Indica quién realizó el registro'); return; }
 
     const rec = {fecha, turno, presentacion, produccion, realizo, obs, d1, d2, d3, d4};
@@ -613,7 +639,8 @@
       await loadRecords();
       await refreshAll();
       showToast('Registro guardado');
-      ['f-produccion','f-obs','f-d1','f-d2','f-d3','f-d4'].forEach(id=> document.getElementById(id).value = '');
+      ['f-produccion-neta','f-obs','f-d1','f-d2','f-d3','f-d4'].forEach(id=> document.getElementById(id).value = '');
+      document.getElementById('f-produccion').value = '';
       selPresentacion.value = '';
       otraWrap.style.display = 'none';
     }catch(e){
@@ -700,6 +727,7 @@
     const defectos = list.reduce((s,r)=> s + totalDefects(r), 0);
     const p = produccion>0 ? defectos/produccion : 0;
     document.getElementById('kpi-produccion').innerHTML = fmt(produccion) + ' <small>pzas</small>';
+    document.getElementById('kpi-neta').innerHTML = fmt(Math.max(produccion - defectos, 0)) + ' <small>pzas</small>';
     document.getElementById('kpi-defectos').innerHTML = fmt(defectos) + ' <small>pzas</small>';
     const pctEl = document.getElementById('kpi-pct');
     pctEl.textContent = pct(p);
@@ -853,6 +881,7 @@
       tr.innerHTML = `
         <td>${r.fecha}</td><td>${r.turno}</td><td>${r.presentacion}</td>
         <td>${fmt(r.produccion)}</td>
+        <td>${fmt(netaDe(r))}</td>
         <td>${fmt(r.d1)}</td><td>${fmt(r.d2)}</td><td>${fmt(r.d3)}</td><td>${fmt(r.d4)}</td>
         <td>${fmt(totalDefects(r))}</td>
         <td><span class="pill ${p>0.02?'pill-warn':'pill-ok'}">${pct(p)}</span></td>
