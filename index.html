@@ -67,6 +67,7 @@
   table.grid tbody tr:nth-child(even):hover td{background:var(--green-lt);}
   table.grid input[type=checkbox]{accent-color:var(--green);}
   .row-del{background:none;border:none;color:var(--red);font-weight:700;font-size:11.5px;cursor:pointer;}
+  .row-edit{background:none;border:none;color:var(--green-dk);font-weight:700;font-size:11.5px;cursor:pointer;}
   .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;}
   .pill-ok{background:#E4F1E8;color:var(--green-dk);}
   .pill-warn{background:#FBE7E4;color:var(--red);}
@@ -678,6 +679,12 @@
     await fbSave(DOC_DP, dpRemote);
     dpLastTs = dpRemote.ts;
   }
+  async function dpUpdateRecord(key, rec){
+    dpRemote.records = dpRemote.records.map(r=> r.id === key ? {...rec, id:key} : r);
+    dpRemote.ts = Date.now();
+    await fbSave(DOC_DP, dpRemote);
+    dpLastTs = dpRemote.ts;
+  }
   async function dpSaveOperadores(){
     dpRemote.operadores = operadores; dpRemote.ts = Date.now();
     await fbSave(DOC_DP, dpRemote); dpLastTs = dpRemote.ts;
@@ -729,7 +736,7 @@
       tr.innerHTML = `<td><input type="checkbox"></td><td>${r.fecha}</td><td>${r.turno}</td><td>${r.presentacion}</td>
         <td>${fmt(r.produccion)}</td><td>${fmt(netaDe(r))}</td><td>${fmt(totalDefects(r))}</td>
         <td><span class="pill ${p>0.02?'pill-warn':'pill-ok'}">${pct(p)}</span></td><td>${r.realizo||'—'}</td>
-        <td><button class="row-del" data-del="${r._key}">Eliminar</button></td>`;
+        <td style="display:flex;gap:10px;"><button class="row-edit" data-edit="${r._key}">Editar</button><button class="row-del" data-del="${r._key}">Eliminar</button></td>`;
       tbody.appendChild(tr);
     }
     tbody.querySelectorAll('[data-del]').forEach(btn=>{
@@ -737,6 +744,11 @@
         await dpDeleteRecord(e.target.getAttribute('data-del'));
         await dpFetchAndApply(); dpRefreshGrid(); await dpRefreshAll();
         showToast('Registro eliminado');
+      });
+    });
+    tbody.querySelectorAll('[data-edit]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        openDpModal(e.target.getAttribute('data-edit'));
       });
     });
   }
@@ -762,10 +774,14 @@
     const btn = document.getElementById('btn-guardar');
     btn.disabled = true; btn.textContent = 'Guardando…';
     try{
-      await dpSaveRecord(rec);
+      if(dpEditingId){
+        await dpUpdateRecord(dpEditingId, rec);
+      }else{
+        await dpSaveRecord(rec);
+      }
       await dpFetchAndApply();
       dpRefreshGrid(); await dpRefreshAll();
-      showToast('Registro guardado');
+      showToast(dpEditingId ? 'Registro actualizado' : 'Registro guardado');
       closeDpModal();
       ['f-produccion-neta','f-obs','f-d1','f-d2','f-d3','f-d4'].forEach(id=> document.getElementById(id).value = '');
       document.getElementById('f-produccion').value = '';
@@ -994,6 +1010,11 @@
     tpRemote.records = tpRemote.records.filter(r=> r.id !== id); tpRemote.ts = Date.now();
     await fbSave(DOC_TP, tpRemote); tpLastTs = tpRemote.ts;
   }
+  async function tpUpdateRecord(id, rec){
+    tpRemote.records = tpRemote.records.map(r=> r.id === id ? {...rec, id} : r);
+    tpRemote.ts = Date.now();
+    await fbSave(DOC_TP, tpRemote); tpLastTs = tpRemote.ts;
+  }
 
   function populateSelectTP(selectEl, list, selected){
     selectEl.innerHTML = list.slice().sort((a,b)=>a.localeCompare(b)).map(o=>`<option value="${o}">${o}</option>`).join('') + '<option value="__nuevo">+ Agregar…</option>';
@@ -1044,7 +1065,7 @@
       const col = TIPO_COLORS[r.tipo]||'#8A8D91'; const tr = document.createElement('tr');
       tr.innerHTML = `<td><input type="checkbox"></td><td>${r.fecha}</td><td>${r.turno}</td><td>${r.planta}</td><td>${r.maquina}</td>
         <td><span class="pill" style="background:${col}22;color:${col};">${r.tipo}</span></td><td>${fmtH(duracionHrs(r.horaIni,r.horaFin))} hrs</td>
-        <td>${r.operador||'—'}</td><td><button class="row-del" data-del="${r.id}">Eliminar</button></td>`;
+        <td>${r.operador||'—'}</td><td style="display:flex;gap:10px;"><button class="row-edit" data-edit="${r.id}">Editar</button><button class="row-del" data-del="${r.id}">Eliminar</button></td>`;
       tbody.appendChild(tr);
     }
     tbody.querySelectorAll('[data-del]').forEach(btn=>{
@@ -1052,6 +1073,11 @@
         await tpDeleteRecord(e.target.getAttribute('data-del'));
         await tpFetchAndApply(); tpRefreshGrid(); await tpRefreshAll();
         showToast('Evento eliminado');
+      });
+    });
+    tbody.querySelectorAll('[data-edit]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        openTpModal(e.target.getAttribute('data-edit'));
       });
     });
   }
@@ -1074,10 +1100,14 @@
     const btn = document.getElementById('btn-guardar-tp');
     btn.disabled=true; btn.textContent='Guardando…';
     try{
-      await tpSaveRecord(rec);
+      if(tpEditingId){
+        await tpUpdateRecord(tpEditingId, rec);
+      }else{
+        await tpSaveRecord(rec);
+      }
       await tpFetchAndApply();
       tpRefreshGrid(); await tpRefreshAll(); await dpRefreshAll(); // refresca también OEE de Doy Pack
-      showToast('Evento guardado'); closeTpModal();
+      showToast(tpEditingId ? 'Evento actualizado' : 'Evento guardado'); closeTpModal();
       ['tf-lote','tf-hora-ini','tf-hora-fin','tf-duracion','tf-maquina','tf-desc','tf-accion'].forEach(id=> document.getElementById(id).value='');
     }catch(e){ console.error(e); showToast('No se pudo guardar. Intenta de nuevo.'); }
     finally{ btn.disabled=false; btn.textContent='Guardar evento'; }
@@ -1235,27 +1265,114 @@
     });
   });
 
-  function openDpModal(){ document.getElementById('dp-modal-overlay').classList.add('show'); setDpmTab('datos'); }
-  function closeDpModal(){ document.getElementById('dp-modal-overlay').classList.remove('show'); }
+  let dpEditingId = null;
+  const DP_PRESETS = ['28 grs Continental','32 grs Negro Café','96 grs Continental','120 grs Negro Café','250 grs Continental','250 grs'];
+
+  function openDpModal(editId){
+    dpEditingId = editId || null;
+    const modalTitle = document.querySelector('#dp-modal-overlay .modal-head-title');
+    const saveBtn = document.getElementById('btn-guardar');
+
+    if(dpEditingId){
+      const r = dpRecords.find(x=> x.id === dpEditingId || x._key === dpEditingId);
+      if(r){
+        modalTitle.textContent = '✏ Editar registro de turno — Doy Pack';
+        saveBtn.textContent = 'Guardar cambios';
+        document.getElementById('f-fecha').value = r.fecha;
+        document.getElementById('f-turno').value = r.turno;
+        if(DP_PRESETS.includes(r.presentacion)){
+          selPresentacion.value = r.presentacion;
+          otraWrap.style.display = 'none';
+        }else{
+          selPresentacion.value = '__otra';
+          otraWrap.style.display = 'block';
+          document.getElementById('f-presentacion-otra').value = r.presentacion || '';
+        }
+        document.getElementById('f-produccion-neta').value = netaDe(r);
+        document.getElementById('f-d1').value = r.d1 || 0;
+        document.getElementById('f-d2').value = r.d2 || 0;
+        document.getElementById('f-d3').value = r.d3 || 0;
+        document.getElementById('f-d4').value = r.d4 || 0;
+        actualizarNeta();
+        document.getElementById('f-obs').value = r.obs || '';
+        if(r.realizo && !operadores.includes(r.realizo)){ operadores.push(r.realizo); populateOperadorSelect(selRealizo); }
+        selRealizo.value = r.realizo || '';
+        realizoOtroWrap.style.display = 'none';
+      }
+    }else{
+      modalTitle.textContent = '➕ Nuevo registro de turno — Doy Pack';
+      saveBtn.textContent = 'Guardar registro';
+      document.getElementById('f-fecha').value = todayISO();
+      document.getElementById('f-turno').value = 'Turno 1';
+      selPresentacion.value = ''; otraWrap.style.display = 'none';
+      document.getElementById('f-presentacion-otra').value = '';
+      ['f-produccion-neta','f-produccion','f-obs','f-d1','f-d2','f-d3','f-d4'].forEach(id=> document.getElementById(id).value = '');
+      selRealizo.value = ''; realizoOtroWrap.style.display = 'none';
+    }
+    document.getElementById('dp-modal-overlay').classList.add('show');
+    setDpmTab('datos');
+  }
+  function closeDpModal(){ document.getElementById('dp-modal-overlay').classList.remove('show'); dpEditingId = null; }
   function setDpmTab(t){
     document.querySelectorAll('[data-dpm-tab]').forEach(b=> b.classList.toggle('active', b.dataset.dpmTab===t));
     document.querySelectorAll('.modal-pane').forEach(p=>{ if(p.id.startsWith('dpm-pane')) p.classList.toggle('active', p.id==='dpm-pane-'+t); });
   }
   document.querySelectorAll('[data-dpm-tab]').forEach(btn=> btn.addEventListener('click', ()=> setDpmTab(btn.dataset.dpmTab)));
-  document.getElementById('btn-open-dp-modal').addEventListener('click', openDpModal);
+  document.getElementById('btn-open-dp-modal').addEventListener('click', ()=> openDpModal());
   document.getElementById('dp-modal-close').addEventListener('click', closeDpModal);
   document.getElementById('dp-modal-cancel').addEventListener('click', closeDpModal);
   document.getElementById('dp-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='dp-modal-overlay') closeDpModal(); });
   document.getElementById('btn-refresh-dp1').addEventListener('click', async ()=>{ await dpFetchAndApply(); dpRefreshGrid(); showToast('Actualizado'); });
 
-  function openTpModal(){ document.getElementById('tp-modal-overlay').classList.add('show'); setTpmTab('datos'); }
-  function closeTpModal(){ document.getElementById('tp-modal-overlay').classList.remove('show'); }
+  let tpEditingId = null;
+
+  function openTpModal(editId){
+    tpEditingId = editId || null;
+    const modalTitle = document.querySelector('#tp-modal-overlay .modal-head-title');
+    const saveBtn = document.getElementById('btn-guardar-tp');
+
+    if(tpEditingId){
+      const r = tpRecords.find(x=> x.id === tpEditingId);
+      if(r){
+        modalTitle.textContent = '✏ Editar evento de paro';
+        saveBtn.textContent = 'Guardar cambios';
+        document.getElementById('tf-fecha').value = r.fecha;
+        document.getElementById('tf-turno').value = r.turno;
+        document.getElementById('tf-planta').value = r.planta;
+        document.getElementById('tf-lote').value = r.lote || '';
+        document.getElementById('tf-hora-ini').value = r.horaIni || '';
+        document.getElementById('tf-hora-fin').value = r.horaFin || '';
+        tpActualizarDuracion();
+        document.getElementById('tf-maquina').value = r.maquina || '';
+        document.getElementById('tf-tipo').value = r.tipo;
+        document.getElementById('tf-desc').value = r.desc || '';
+        document.getElementById('tf-accion').value = r.accion || '';
+        if(r.operador && !tpOperadores.includes(r.operador)){ tpOperadores.push(r.operador); populateSelectTP(selTfOperador, tpOperadores); }
+        selTfOperador.value = r.operador || ''; tfOperadorOtroWrap.style.display = 'none';
+        if(r.responsable && !tpResponsables.includes(r.responsable)){ tpResponsables.push(r.responsable); populateSelectTP(selTfResponsable, tpResponsables); }
+        selTfResponsable.value = r.responsable || ''; tfResponsableOtroWrap.style.display = 'none';
+      }
+    }else{
+      modalTitle.textContent = '➕ Nuevo evento de paro';
+      saveBtn.textContent = 'Guardar evento';
+      document.getElementById('tf-fecha').value = todayISO();
+      document.getElementById('tf-turno').value = 'Primero';
+      document.getElementById('tf-planta').value = 'Frascos';
+      ['tf-lote','tf-hora-ini','tf-hora-fin','tf-duracion','tf-maquina','tf-desc','tf-accion'].forEach(id=> document.getElementById(id).value = '');
+      document.getElementById('tf-tipo').value = '🧰 Mantenimiento Correctivo';
+      selTfOperador.value = ''; tfOperadorOtroWrap.style.display = 'none';
+      selTfResponsable.value = ''; tfResponsableOtroWrap.style.display = 'none';
+    }
+    document.getElementById('tp-modal-overlay').classList.add('show');
+    setTpmTab('datos');
+  }
+  function closeTpModal(){ document.getElementById('tp-modal-overlay').classList.remove('show'); tpEditingId = null; }
   function setTpmTab(t){
     document.querySelectorAll('[data-tpm-tab]').forEach(b=> b.classList.toggle('active', b.dataset.tpmTab===t));
     document.querySelectorAll('.modal-pane').forEach(p=>{ if(p.id.startsWith('tpm-pane')) p.classList.toggle('active', p.id==='tpm-pane-'+t); });
   }
   document.querySelectorAll('[data-tpm-tab]').forEach(btn=> btn.addEventListener('click', ()=> setTpmTab(btn.dataset.tpmTab)));
-  document.getElementById('btn-open-tp-modal').addEventListener('click', openTpModal);
+  document.getElementById('btn-open-tp-modal').addEventListener('click', ()=> openTpModal());
   document.getElementById('tp-modal-close').addEventListener('click', closeTpModal);
   document.getElementById('tp-modal-cancel').addEventListener('click', closeTpModal);
   document.getElementById('tp-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='tp-modal-overlay') closeTpModal(); });
