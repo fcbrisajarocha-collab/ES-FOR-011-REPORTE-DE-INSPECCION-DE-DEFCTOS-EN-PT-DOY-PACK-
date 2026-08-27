@@ -1137,7 +1137,14 @@
       document.querySelectorAll('#view-tp-dash .subview').forEach(v=>v.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('tp-subview-'+btn.dataset.tpSub).classList.add('active');
-      setTimeout(()=>{ if(chartPareto) chartPareto.resize(); if(chartPlanta) chartPlanta.resize(); if(chartTendenciaTP) chartTendenciaTP.resize(); },0);
+      // el canvas estaba oculto (display:none) al crear la gráfica, así que Chart.js no tenía tamaño real.
+      // Al mostrar la sub-pestaña, la volvemos a dibujar ya con el contenedor visible.
+      setTimeout(()=>{
+        const sub = btn.dataset.tpSub;
+        if(sub === 'pareto'){ if(chartPareto){ chartPareto.destroy(); chartPareto = null; } tpRefreshChartPareto(tpLastList); }
+        if(sub === 'planta'){ if(chartPlanta){ chartPlanta.destroy(); chartPlanta = null; } tpRefreshChartPlanta(tpLastList); }
+        if(sub === 'tendencia'){ if(chartTendenciaTP){ chartTendenciaTP.destroy(); chartTendenciaTP = null; } tpRefreshChartTendencia(tpLastList); }
+      }, 0);
     });
   });
 
@@ -1239,8 +1246,10 @@
       tbody.appendChild(tr);
     }
   }
+  let tpLastList = [];
   async function tpRefreshAll(){
     const list = tpFilteredRecords();
+    tpLastList = list;
     tpRefreshHeroKpis(list); tpRefreshProcesoCards(); tpRefreshChartPareto(list); tpRefreshChartPlanta(list);
     tpRefreshRankingMaquina(list); tpRefreshChartTendencia(list); tpRefreshDetalle(list); tpRefreshGrid();
   }
