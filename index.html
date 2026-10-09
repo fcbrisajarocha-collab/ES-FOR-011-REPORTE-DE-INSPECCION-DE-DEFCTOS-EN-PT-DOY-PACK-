@@ -61,6 +61,7 @@
   table.grid{width:100%;border-collapse:collapse;font-size:12.5px;}
   table.grid thead th{background:#EFF2F1;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);padding:9px 12px;border-bottom:2px solid var(--line);white-space:nowrap;}
   table.grid thead th.chk{width:36px;}
+  table.grid tfoot td{padding:9px 12px;border-top:2px solid var(--line);white-space:nowrap;}
   table.grid tbody td{padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;color:var(--ink);}
   table.grid tbody tr:hover td{background:var(--green-lt);}
   table.grid tbody tr:nth-child(even) td{background:#FAFBFB;}
@@ -146,6 +147,10 @@
   .btn-ghost:hover{border-color:var(--green);color:var(--green-dk);}
   .defect-mini{border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;background:#FAFBFB;}
   .defect-mini .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;}
+  .lote-add{display:flex;gap:6px;} .lote-add input{flex:1;text-transform:uppercase;} .lote-add .btn{padding:7px 12px;font-size:12px;white-space:nowrap;}
+  .lote-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+  .lote-chip{background:var(--green-lt);color:var(--green-dk);border-radius:999px;padding:3px 6px 3px 11px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;}
+  .lote-chip button{border:none;background:none;color:var(--green-dk);cursor:pointer;font-size:13px;line-height:1;padding:0 3px;}
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--navy);color:#fff;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:all .25s ease;z-index:300;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
   .empty{text-align:center;padding:16px;color:var(--ink-soft);font-size:12.5px;}
@@ -164,6 +169,8 @@
     <button class="navtab" data-nav="dp-dash">Dashboard Doy Pack</button>
     <button class="navtab" data-nav="tp-grid">Tiempos Perdidos</button>
     <button class="navtab" data-nav="tp-dash">Dashboard Tiempos Perdidos</button>
+    <button class="navtab" data-nav="int-dash">📈 Integrado por Turno</button>
+    <button class="navtab" data-nav="mer-dash">♻ Merma</button>
     <div class="topnav-right">
       <div class="sync-wrap"><span id="sync-dot" class="sync-dot"></span><span id="sync-txt">Cargando…</span></div>
     </div>
@@ -173,6 +180,10 @@
   <div class="toolbar" id="toolbar-dp-grid">
     <button class="tbtn primary" id="btn-open-dp-modal">➕ Nuevo registro</button>
     <button class="tbtn" id="btn-refresh-dp1">🔄 Actualizar</button>
+    <input type="search" id="dp-buscar-lote" placeholder="🔎 Buscar lote (PT, bobina, bolsa, caja)…" style="margin-left:8px;padding:7px 10px;border-radius:6px;border:none;font-size:12.5px;min-width:250px;">
+    <div class="toolbar-spacer"></div>
+    <input type="date" id="dp-fecha-016" title="Fecha del reporte ES-FOR-016" style="padding:6px 8px;border-radius:6px;border:none;font-size:12.5px;">
+    <button class="tbtn" id="btn-print-016">🖨 ES-FOR-016</button>
   </div>
   <div class="toolbar" id="toolbar-dp-dash" style="display:none;">
     <span style="color:#fff;font-weight:700;font-size:12.5px;">📊 Dashboard de Defectos y OEE</span>
@@ -188,6 +199,18 @@
     <div class="toolbar-spacer"></div>
     <button class="tbtn" id="btn-print-tp">🖨 Imprimir / PDF</button>
   </div>
+  <div class="toolbar" id="toolbar-int-dash" style="display:none;">
+    <span style="color:#fff;font-weight:700;font-size:12.5px;">📈 Producción · Defectos · Tiempos perdidos · Estadísticas — Doy Pack</span>
+    <div class="toolbar-spacer"></div>
+    <button class="tbtn" id="btn-print-int">🖨 Imprimir / PDF</button>
+  </div>
+  <div class="toolbar" id="toolbar-mer-dash" style="display:none;">
+    <span style="color:#fff;font-weight:700;font-size:12.5px;">♻ Merma por lote y por día — Doy Pack</span>
+    <div class="toolbar-spacer"></div>
+    <button class="tbtn" id="btn-csv-mer-dia">⬇ CSV por día</button>
+    <button class="tbtn" id="btn-csv-mer-lote">⬇ CSV por lote</button>
+    <button class="tbtn" id="btn-print-mer">🖨 Imprimir / PDF</button>
+  </div>
 
   <!-- ===== VIEW: DOY PACK GRID ===== -->
   <div class="view active" id="view-dp-grid">
@@ -200,7 +223,7 @@
         <table class="grid">
           <thead><tr>
             <th class="chk"><input type="checkbox" disabled></th>
-            <th>Fecha</th><th>Turno</th><th>Presentación</th><th>Bruta</th><th>Neta</th><th>Defectos</th><th>% Def.</th><th>Realizó</th><th></th>
+            <th>Fecha</th><th>Turno</th><th>Presentación</th><th>Lote PT</th><th>Bruta</th><th>Neta</th><th>Cajas</th><th>Defectos</th><th>% Def.</th><th>Realizó</th><th></th>
           </tr></thead>
           <tbody id="dp-grid-body"></tbody>
         </table>
@@ -262,6 +285,8 @@
         <div class="field" style="max-width:240px;"><label>Horas efectivas por turno</label><input type="number" min="0" step="0.1" id="oee-horas-efectivas"></div>
         <label style="display:block;margin:10px 0 6px;font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Tasa ideal (piezas/hora) por presentación</label>
         <div id="oee-tasas-wrap" class="grid3" style="margin-bottom:10px;"></div>
+        <label style="display:block;margin:10px 0 6px;font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Piezas por caja por presentación (ES-FOR-016)</label>
+        <div id="ppc-wrap" class="grid3" style="margin-bottom:10px;"></div>
         <button class="btn btn-primary" id="btn-oee-guardar" style="padding:9px 16px;font-size:12.5px;">Guardar configuración</button>
         <span id="oee-config-status" style="font-size:11.5px;color:var(--ink-soft);margin-left:8px;"></span>
       </div>
@@ -408,7 +433,142 @@
       </div>
     </div>
   </div>
+
+  <!-- ===== VIEW: INTEGRADO POR TURNO ===== -->
+  <div class="view" id="view-int-dash">
+    <div class="filterbar dash-print-hide">
+      <div class="field" style="min-width:150px;"><label>Fecha de referencia</label><input type="date" id="int-fecha-ref"></div>
+      <div class="field" style="min-width:auto;">
+        <label>Período</label>
+        <div class="period-group">
+          <button class="pbtn" data-int-period="dia">Día</button>
+          <button class="pbtn active" data-int-period="semana">Semana</button>
+          <button class="pbtn" data-int-period="mes">Mes</button>
+          <button class="pbtn" data-int-period="año">Año</button>
+          <button class="pbtn" data-int-period="rango">Rango</button>
+        </div>
+      </div>
+      <div class="field" id="int-rango-wrap" style="display:none;">
+        <label>Del — al</label>
+        <div style="display:flex;gap:6px;"><input type="date" id="int-rango-ini" style="width:130px;"><input type="date" id="int-rango-fin" style="width:130px;"></div>
+      </div>
+      <div class="field"><label>Turno</label><select id="int-turno"><option value="">Todos</option><option>Turno 1</option><option>Turno 2</option><option>Turno 3</option></select></div>
+      <button class="btn btn-ghost" id="btn-int-limpiar">Limpiar</button>
+    </div>
+
+    <div id="int-period-label" style="font-size:12.5px;color:var(--ink-soft);font-weight:700;margin:0 0 10px;text-transform:uppercase;letter-spacing:.03em;"></div>
+
+    <div class="hero" style="background:linear-gradient(135deg,#0F1A12,var(--green-dk));">
+      <div>
+        <div class="hero-label">OEE del período</div>
+        <div class="hero-value" id="int-hero-oee">0.0%</div>
+        <div class="hero-sub" id="int-hero-sub">Disponibilidad × Rendimiento × Calidad</div>
+      </div>
+      <div class="hero-side">
+        <div class="hero-mini"><span id="int-disp">0%</span><small>Disponibilidad</small></div>
+        <div class="hero-mini"><span id="int-rend">0%</span><small>Rendimiento</small></div>
+        <div class="hero-mini"><span id="int-cal">0%</span><small>Calidad</small></div>
+        <div class="hero-mini"><span id="int-turnos">0</span><small>Turnos</small></div>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Producción neta</div><div class="kpi-value" id="int-kpi-neta">0</div></div>
+      <div class="kpi" style="border-left-color:var(--red);"><div class="kpi-label">Piezas con defecto · % def.</div><div class="kpi-value" id="int-kpi-def">0</div></div>
+      <div class="kpi" style="border-left-color:var(--amber);"><div class="kpi-label">Horas perdidas · paros</div><div class="kpi-value" id="int-kpi-hrs">0</div></div>
+      <div class="kpi" style="border-left-color:var(--blue);"><div class="kpi-label">Piezas no producidas por paros*</div><div class="kpi-value" id="int-kpi-perdidas">0</div></div>
+    </div>
+    <p class="panel-hint" style="margin:-8px 0 14px;">* Estimado: horas perdidas × tasa ideal de la presentación que se corría en el turno.</p>
+
+    <div id="int-alertas"></div>
+
+    <div class="gridcard">
+      <div class="grid-title-bar"><div class="grid-title">Reporte consolidado por turno</div><div class="grid-count" id="int-count">0 turnos</div></div>
+      <div class="grid-scroll">
+        <table class="grid">
+          <thead><tr><th>Fecha</th><th>Turno</th><th>Presentación</th><th>Lote PT</th><th>Bruta</th><th>Neta</th><th>Defectos</th><th>% Def.</th><th>Paros</th><th>Hrs perd.</th><th>Causa principal</th><th>Disp.</th><th>Rend.</th><th>Cal.</th><th>OEE</th></tr></thead>
+          <tbody id="int-tbody"></tbody>
+        </table>
+      </div>
+      <div class="grid-empty" id="int-empty" style="display:none;">No hay turnos en el período.</div>
+    </div>
+
+    <div class="grid2" style="margin-top:14px;">
+      <div class="panel"><div class="panel-title">Producción neta y OEE por turno</div><p class="panel-hint">Barras: piezas buenas · Línea: OEE.</p><div class="chart-box"><canvas id="chart-int-combo"></canvas></div></div>
+      <div class="panel"><div class="panel-title">Gráfico de control p — % defectuoso</div><p class="panel-hint" id="int-pchart-hint">Límites a 3σ con tamaño de muestra variable (producción bruta del turno).</p><div class="chart-box"><canvas id="chart-int-pchart"></canvas></div></div>
+    </div>
+
+    <div class="grid2" style="margin-top:14px;">
+      <div class="panel"><div class="panel-title">Estadística descriptiva por turno</div><p class="panel-hint">Cada turno capturado es una observación.</p><div class="grid-scroll"><table class="grid"><thead><tr><th>Indicador</th><th>n</th><th>Media</th><th>Desv. est.</th><th>Mín.</th><th>Máx.</th><th>CV</th></tr></thead><tbody id="int-stats"></tbody></table></div></div>
+      <div class="panel"><div class="panel-title">Comparativo entre turnos</div><p class="panel-hint">Promedios por turno en el período (ignora el filtro de turno).</p><div class="grid-scroll"><table class="grid"><thead><tr><th>Turno</th><th>Turnos</th><th>Neta prom.</th><th>% Def.</th><th>Hrs perd. prom.</th><th>OEE prom.</th></tr></thead><tbody id="int-comp"></tbody></table></div>
+        <p class="panel-hint" id="int-corr" style="margin:12px 0 0;"></p>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- ===== VIEW: MERMA (se inserta dentro de .app por JS) ===== -->
+<template id="tpl-mer">
+  <div class="view" id="view-mer-dash">
+    <div class="filterbar dash-print-hide">
+      <div class="field" style="min-width:150px;"><label>Fecha de referencia</label><input type="date" id="mer-fecha-ref"></div>
+      <div class="field" style="min-width:auto;">
+        <label>Período</label>
+        <div class="period-group">
+          <button class="pbtn" data-mer-period="dia">Día</button>
+          <button class="pbtn" data-mer-period="semana">Semana</button>
+          <button class="pbtn active" data-mer-period="mes">Mes</button>
+          <button class="pbtn" data-mer-period="año">Año</button>
+          <button class="pbtn" data-mer-period="rango">Rango</button>
+        </div>
+      </div>
+      <div class="field" id="mer-rango-wrap" style="display:none;">
+        <label>Del — al</label>
+        <div style="display:flex;gap:6px;"><input type="date" id="mer-rango-ini" style="width:130px;"><input type="date" id="mer-rango-fin" style="width:130px;"></div>
+      </div>
+      <div class="field"><label>Presentación</label><select id="mer-presentacion"><option value="">Todas</option></select></div>
+      <div class="field"><label>Lote PT</label><input type="search" id="mer-lote" placeholder="Filtrar lote…" style="text-transform:uppercase;"></div>
+      <button class="btn btn-ghost" id="btn-mer-limpiar">Limpiar</button>
+    </div>
+
+    <div id="mer-period-label" style="font-size:12.5px;color:var(--ink-soft);font-weight:700;margin:0 0 10px;text-transform:uppercase;letter-spacing:.03em;"></div>
+
+    <div class="hero">
+      <div>
+        <div class="hero-label">% Merma del período</div>
+        <div class="hero-value" id="mer-hero-pct">0.00%</div>
+        <div class="hero-sub" id="mer-hero-sub">Piezas con defecto ÷ piezas producidas</div>
+      </div>
+      <div class="hero-side">
+        <div class="hero-mini"><span id="mer-hero-lotes">0</span><small>Lotes</small></div>
+        <div class="hero-mini"><span id="mer-hero-dias">0</span><small>Días</small></div>
+        <div class="hero-mini"><span id="mer-hero-peor">—</span><small>Lote con mayor %</small></div>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Piezas producidas (bruta)</div><div class="kpi-value" id="mer-kpi-bruta">0</div></div>
+      <div class="kpi"><div class="kpi-label">Piezas buenas (neta)</div><div class="kpi-value" id="mer-kpi-neta">0</div></div>
+      <div class="kpi" style="border-left-color:var(--red);"><div class="kpi-label">Merma (piezas)</div><div class="kpi-value" id="mer-kpi-merma">0</div></div>
+      <div class="kpi" style="border-left-color:var(--amber);"><div class="kpi-label">Producto en merma*</div><div class="kpi-value" id="mer-kpi-kg">0</div></div>
+    </div>
+    <p class="panel-hint" style="margin:-8px 0 14px;">* Estimado con el gramaje del nombre de la presentación (ej. 96 grs). % Merma = (mal sellado + mal codificado + fuga + peso fuera de espec.) ÷ producción bruta.</p>
+
+    <div class="panel"><div class="panel-title">Merma diaria</div><p class="panel-hint">Barras: piezas en merma · Línea: % merma del día.</p><div class="chart-box" style="height:240px;"><canvas id="chart-mer-dia"></canvas></div></div>
+
+    <div class="gridcard" style="margin-top:14px;">
+      <div class="grid-title-bar"><div class="grid-title">Merma por día</div><div class="grid-count" id="mer-dia-count">0 días</div></div>
+      <div class="grid-scroll"><table class="grid"><thead><tr><th>Fecha</th><th>Turnos</th><th>Lotes PT</th><th>Bruta</th><th>Neta</th><th>Sellado</th><th>Codificado</th><th>Fuga</th><th>Peso</th><th>Merma pzas</th><th>% Merma</th><th>Kg*</th></tr></thead><tbody id="mer-dia-body"></tbody><tfoot id="mer-dia-foot"></tfoot></table></div>
+      <div class="grid-empty" id="mer-dia-empty" style="display:none;">No hay producción en el período.</div>
+    </div>
+
+    <div class="gridcard" style="margin-top:14px;">
+      <div class="grid-title-bar"><div class="grid-title">Merma por lote de producto terminado</div><div class="grid-count" id="mer-lote-count">0 lotes</div></div>
+      <div class="grid-scroll"><table class="grid"><thead><tr><th>Lote PT</th><th>Presentación</th><th>Producido</th><th>Turnos</th><th>Bruta</th><th>Neta</th><th>Sellado</th><th>Codificado</th><th>Fuga</th><th>Peso</th><th>Merma pzas</th><th>% Merma</th><th>Kg*</th></tr></thead><tbody id="mer-lote-body"></tbody></table></div>
+      <div class="grid-empty" id="mer-lote-empty" style="display:none;">No hay lotes en el período.</div>
+    </div>
+  </div>
+</template>
 
 <!-- ===== MODAL: NUEVO REGISTRO DOY PACK ===== -->
 <div class="modal-overlay" id="dp-modal-overlay">
@@ -417,6 +577,7 @@
     <div class="modal-tabs">
       <button class="mtab active" data-dpm-tab="datos">Datos del turno</button>
       <button class="mtab" data-dpm-tab="produccion">Producción y defectos</button>
+      <button class="mtab" data-dpm-tab="empaque">Empaque</button>
       <button class="mtab" data-dpm-tab="obs">Observaciones</button>
     </div>
     <div class="modal-body">
@@ -437,6 +598,10 @@
           </div>
           <div class="field" id="f-presentacion-otra-wrap" style="display:none;"><label>Especificar presentación</label><input type="text" id="f-presentacion-otra" placeholder="Ej. Doy Pack 750g"></div>
         </div>
+        <div class="grid2" style="margin-top:12px;">
+          <div class="field"><label>Lote de producto terminado *</label><input type="text" id="f-lote-pt" placeholder="Ej. 2726LMA" style="text-transform:uppercase;"></div>
+          <div class="field"><label>Consumo preferente</label><input type="date" id="f-consumo-pref"></div>
+        </div>
         <div class="field" style="margin-top:12px;">
           <label>Realizó</label>
           <select id="f-realizo"></select>
@@ -451,6 +616,7 @@
           <div class="field"><label>Producción neta del turno (piezas buenas)</label><input type="number" min="0" id="f-produccion-neta" placeholder="0"></div>
           <div class="field"><label>Producción bruta (calculada)</label><input type="text" id="f-produccion" readonly placeholder="0" style="background:#EFF2F1;font-weight:700;color:var(--ink);"></div>
         </div>
+        <div class="field" style="margin-top:12px;"><label>Cajas producidas (calculadas · producción neta ÷ piezas por caja)</label><input type="text" id="f-cajas" readonly placeholder="—" style="background:#EFF2F1;font-weight:700;color:var(--ink);"></div>
         <label style="display:block;margin:14px 0 6px;font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Conteo de defectos</label>
         <div class="grid2" style="row-gap:10px;">
           <div class="defect-mini"><span><span class="dot" style="background:#C0392B"></span>Mal sellado</span><input type="number" min="0" id="f-d1" placeholder="0" style="margin-top:8px;"></div>
@@ -459,8 +625,15 @@
           <div class="defect-mini"><span><span class="dot" style="background:#4A5FA0"></span>Peso fuera de espec.</span><input type="number" min="0" id="f-d4" placeholder="0" style="margin-top:8px;"></div>
         </div>
       </div>
+      <div class="modal-pane" id="dpm-pane-empaque">
+        <p class="panel-hint" style="margin:0 0 12px;">Lotes de material de empaque usados en el turno. Si hubo cambio de bobina, bolsa o caja, agrega cada lote.</p>
+        <div class="field lote-field" data-lote="lotesBobina"><label>Lote de bobina</label><div class="lote-add"><input type="text" placeholder="Escribe el lote y presiona Agregar"><button type="button" class="btn btn-ghost">+ Agregar</button></div><div class="lote-chips"></div></div>
+        <div class="field lote-field" data-lote="lotesBolsa" style="margin-top:12px;"><label>Lote de bolsa</label><div class="lote-add"><input type="text" placeholder="Escribe el lote y presiona Agregar"><button type="button" class="btn btn-ghost">+ Agregar</button></div><div class="lote-chips"></div></div>
+        <div class="field lote-field" data-lote="lotesCaja" style="margin-top:12px;"><label>Lote de caja</label><div class="lote-add"><input type="text" placeholder="Escribe el lote y presiona Agregar"><button type="button" class="btn btn-ghost">+ Agregar</button></div><div class="lote-chips"></div></div>
+      </div>
       <div class="modal-pane" id="dpm-pane-obs">
         <div class="field"><label>Observaciones</label><textarea id="f-obs" placeholder="Opcional" style="min-height:120px;"></textarea></div>
+        <div class="field" style="margin-top:12px;"><label>Revisó</label><select id="f-reviso"></select></div>
       </div>
     </div>
     <div class="modal-foot"><button class="btn btn-ghost" id="dp-modal-cancel">Cancelar</button><button class="btn btn-primary" id="btn-guardar">Guardar registro</button></div>
@@ -638,17 +811,27 @@
   let tasasIdeales = {...DEFAULT_TASAS};
   let horasEfectivas = DEFAULT_HORAS_EFECTIVAS;
   let chartTipos, chartPresentacion, chartTendencia;
-  let dpRemote = { records:[], operadores: operadores.slice(), tasasIdeales:{...tasasIdeales}, horasEfectivas, ts:0 };
+  let piezasCaja = {};      // piezas por caja por presentación (ES-FOR-016 reporta Doy Pack en cajas)
+  let revisores = [];       // quién revisa el reporte de producción
+  let dpRemote = { records:[], operadores: operadores.slice(), tasasIdeales:{...tasasIdeales}, horasEfectivas, piezasCaja:{}, revisores:[], ts:0 };
   let dpLastTs = 0;
 
   function totalDefects(r){ return DEFECT_KEYS.reduce((s,k)=> s + (Number(r[k])||0), 0); }
   function pctDef(r){ const p = Number(r.produccion)||0; return p>0 ? totalDefects(r)/p : 0; }
   function netaDe(r){ return Math.max((Number(r.produccion)||0) - totalDefects(r), 0); }
+  function cajasDe(r){ const ppc = Number(piezasCaja[r.presentacion])||0; return ppc>0 ? netaDe(r)/ppc : null; }
+  function fmtCajas(r){
+    const ppc = Number(piezasCaja[r.presentacion])||0; if(!(ppc>0)) return '—';
+    const n = netaDe(r), c = Math.floor(n/ppc), resto = n - c*ppc;
+    return fmt(c) + (resto ? ' + ' + fmt(resto) + ' pzas' : '');
+  }
+  function lotesTxt(arr){ return Array.isArray(arr) && arr.length ? arr.join(', ') : ''; }
+  function esc(t){ return String(t==null?'':t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   async function dpFetchAndApply(){
     const d = await fbGet(DOC_DP);
     if(!d){
-      dpRemote = { records:[], operadores: operadores.slice(), tasasIdeales:{...tasasIdeales}, horasEfectivas, ts: Date.now() };
+      dpRemote = { records:[], operadores: operadores.slice(), tasasIdeales:{...tasasIdeales}, horasEfectivas, piezasCaja:{}, revisores:[], ts: Date.now() };
       await fbSave(DOC_DP, dpRemote);
     }else{
       dpRemote = {
@@ -656,9 +839,12 @@
         operadores: Array.isArray(d.operadores) && d.operadores.length ? d.operadores : operadores.slice(),
         tasasIdeales: (d.tasasIdeales && Object.keys(d.tasasIdeales).length) ? d.tasasIdeales : {...tasasIdeales},
         horasEfectivas: Number(d.horasEfectivas) > 0 ? Number(d.horasEfectivas) : horasEfectivas,
+        piezasCaja: (d.piezasCaja && typeof d.piezasCaja==='object') ? d.piezasCaja : {},
+        revisores: Array.isArray(d.revisores) ? d.revisores : [],
         ts: Number(d.ts)||0
       };
     }
+    piezasCaja = dpRemote.piezasCaja; revisores = dpRemote.revisores;
     operadores = dpRemote.operadores;
     tasasIdeales = dpRemote.tasasIdeales;
     horasEfectivas = dpRemote.horasEfectivas;
@@ -716,25 +902,71 @@
   selPresentacion.addEventListener('change', ()=>{ otraWrap.style.display = selPresentacion.value === '__otra' ? 'block' : 'none'; });
   document.getElementById('f-fecha').value = todayISO();
 
+  /* ---- lotes de empaque (varios por turno) ---- */
+  const loteState = {lotesBobina:[], lotesBolsa:[], lotesCaja:[]};
+  function renderLotes(key){
+    const box = document.querySelector(`.lote-field[data-lote="${key}"] .lote-chips`);
+    box.innerHTML = loteState[key].map((l,i)=>`<span class="lote-chip">${esc(l)}<button type="button" data-i="${i}" title="Quitar">✕</button></span>`).join('');
+    box.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{ loteState[key].splice(Number(b.dataset.i),1); renderLotes(key); }));
+  }
+  function setLotes(r){ Object.keys(loteState).forEach(k=>{ loteState[k] = Array.isArray(r&&r[k]) ? r[k].slice() : []; renderLotes(k); }); }
+  function agregarLotePendiente(){ // si escribieron un lote pero no presionaron "Agregar", también se guarda
+    document.querySelectorAll('.lote-field').forEach(f=>{ const inp=f.querySelector('input'); const v=inp.value.trim().toUpperCase(); if(v && !loteState[f.dataset.lote].includes(v)) loteState[f.dataset.lote].push(v); inp.value=''; renderLotes(f.dataset.lote); });
+  }
+  document.querySelectorAll('.lote-field').forEach(f=>{
+    const key = f.dataset.lote, inp = f.querySelector('input');
+    const add = ()=>{ const v = inp.value.trim().toUpperCase(); if(!v) return; if(!loteState[key].includes(v)) loteState[key].push(v); inp.value=''; renderLotes(key); inp.focus(); };
+    f.querySelector('button').addEventListener('click', add);
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } });
+  });
+
+  /* ---- Revisó ---- */
+  const selReviso = document.getElementById('f-reviso');
+  function populateRevisoSelect(selected){
+    selReviso.innerHTML = '<option value="">— Pendiente —</option>' + revisores.slice().sort((a,b)=>a.localeCompare(b)).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('') + '<option value="__nuevo">+ Agregar persona…</option>';
+    selReviso.value = (selected && revisores.includes(selected)) ? selected : '';
+  }
+  selReviso.addEventListener('change', async ()=>{
+    if(selReviso.value !== '__nuevo') return;
+    const name = (prompt('Nombre de quien revisa:')||'').trim();
+    if(name && !revisores.some(o=>o.toLowerCase()===name.toLowerCase())){
+      revisores.push(name); dpRemote.revisores = revisores; dpRemote.ts = Date.now();
+      try{ await fbSave(DOC_DP, dpRemote); dpLastTs = dpRemote.ts; showToast('Persona agregada'); }catch(e){ showToast('No se pudo guardar'); }
+    }
+    populateRevisoSelect(name || '');
+  });
+  populateRevisoSelect();
+
+  function presentacionActual(){ return selPresentacion.value === '__otra' ? document.getElementById('f-presentacion-otra').value.trim() : selPresentacion.value; }
+
   function actualizarNeta(){
     const neta = Number(document.getElementById('f-produccion-neta').value)||0;
     const d1 = Number(document.getElementById('f-d1').value)||0, d2 = Number(document.getElementById('f-d2').value)||0;
     const d3 = Number(document.getElementById('f-d3').value)||0, d4 = Number(document.getElementById('f-d4').value)||0;
     document.getElementById('f-produccion').value = fmt(neta + d1+d2+d3+d4) + ' pzas';
+    const pres = presentacionActual(), ppc = Number(piezasCaja[pres])||0;
+    document.getElementById('f-cajas').value = !pres ? 'Selecciona la presentación' : !(ppc>0) ? 'Falta configurar piezas por caja de ' + pres
+      : fmt(Math.floor(neta/ppc)) + ' cajas' + (neta % ppc ? ' + ' + fmt(neta % ppc) + ' pzas' : '') + '  (' + ppc + ' pzas/caja)';
   }
-  ['f-produccion-neta','f-d1','f-d2','f-d3','f-d4'].forEach(id=> document.getElementById(id).addEventListener('input', actualizarNeta));
+  ['f-produccion-neta','f-d1','f-d2','f-d3','f-d4','f-presentacion-otra'].forEach(id=> document.getElementById(id).addEventListener('input', actualizarNeta));
+  selPresentacion.addEventListener('change', actualizarNeta);
 
   function dpRefreshGrid(){
     const tbody = document.getElementById('dp-grid-body');
     tbody.innerHTML = '';
-    const sorted = [...dpRecords].sort((a,b)=> b._key.localeCompare(a._key));
+    const q = (document.getElementById('dp-buscar-lote').value||'').trim().toUpperCase();
+    const coincide = r=> !q || [r.lotePT, ...(r.lotesBobina||[]), ...(r.lotesBolsa||[]), ...(r.lotesCaja||[])].some(l=> String(l||'').toUpperCase().includes(q));
+    const sorted = [...dpRecords].filter(coincide).sort((a,b)=> b._key.localeCompare(a._key));
     document.getElementById('dp-grid-count').textContent = sorted.length + ' registro' + (sorted.length!==1?'s':'');
     document.getElementById('dp-grid-empty').style.display = sorted.length ? 'none':'block';
+    document.getElementById('dp-grid-empty').textContent = q ? 'Ningún registro contiene el lote "' + q + '".' : 'Aún no hay registros capturados.';
     for(const r of sorted){
       const p = pctDef(r);
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td><input type="checkbox"></td><td>${r.fecha}</td><td>${r.turno}</td><td>${r.presentacion}</td>
-        <td>${fmt(r.produccion)}</td><td>${fmt(netaDe(r))}</td><td>${fmt(totalDefects(r))}</td>
+      const lotesEmp = [['Bobina',r.lotesBobina],['Bolsa',r.lotesBolsa],['Caja',r.lotesCaja]].filter(x=>x[1]&&x[1].length).map(x=>x[0]+': '+x[1].join(', ')).join(' · ');
+      tr.innerHTML = `<td><input type="checkbox"></td><td>${r.fecha}</td><td>${r.turno}</td><td>${esc(r.presentacion)}</td>
+        <td title="${esc(lotesEmp || 'Sin lotes de empaque')}"><b>${esc(r.lotePT)||'<span class="pill pill-warn">Sin lote</span>'}</b>${r.consumoPref?`<div style="font-size:10.5px;color:var(--ink-soft)">CP ${r.consumoPref}</div>`:''}</td>
+        <td>${fmt(r.produccion)}</td><td>${fmt(netaDe(r))}</td><td>${fmtCajas(r)}</td><td>${fmt(totalDefects(r))}</td>
         <td><span class="pill ${p>0.02?'pill-warn':'pill-ok'}">${pct(p)}</span></td><td>${r.realizo||'—'}</td>
         <td style="display:flex;gap:10px;"><button class="row-edit" data-edit="${r._key}">Editar</button><button class="row-del" data-del="${r._key}">Eliminar</button></td>`;
       tbody.appendChild(tr);
@@ -764,13 +996,19 @@
     const d1 = Number(document.getElementById('f-d1').value)||0, d2 = Number(document.getElementById('f-d2').value)||0;
     const d3 = Number(document.getElementById('f-d3').value)||0, d4 = Number(document.getElementById('f-d4').value)||0;
     const produccion = netaCapturada + (d1+d2+d3+d4);
+    agregarLotePendiente();
+    const lotePT = document.getElementById('f-lote-pt').value.trim().toUpperCase();
+    const consumoPref = document.getElementById('f-consumo-pref').value;
+    const reviso = selReviso.value === '__nuevo' ? '' : selReviso.value;
 
     if(!fecha){ showToast('Indica la fecha del turno'); return; }
     if(!presentacion){ showToast('Indica la presentación'); return; }
     if(netaCapturada <= 0){ showToast('Indica la producción neta del turno'); return; }
     if(!realizo){ showToast('Indica quién realizó el registro'); return; }
+    if(!lotePT){ showToast('Indica el lote de producto terminado'); setDpmTab('datos'); return; }
 
-    const rec = {fecha, turno, presentacion, produccion, realizo, obs, d1, d2, d3, d4};
+    const rec = {fecha, turno, presentacion, produccion, realizo, obs, d1, d2, d3, d4,
+                 lotePT, consumoPref, lotesBobina: loteState.lotesBobina.slice(), lotesBolsa: loteState.lotesBolsa.slice(), lotesCaja: loteState.lotesCaja.slice(), reviso};
     const btn = document.getElementById('btn-guardar');
     btn.disabled = true; btn.textContent = 'Guardando…';
     try{
@@ -784,7 +1022,8 @@
       showToast(dpEditingId ? 'Registro actualizado' : 'Registro guardado');
       closeDpModal();
       ['f-produccion-neta','f-obs','f-d1','f-d2','f-d3','f-d4'].forEach(id=> document.getElementById(id).value = '');
-      document.getElementById('f-produccion').value = '';
+      document.getElementById('f-produccion').value = ''; document.getElementById('f-cajas').value = '';
+      document.getElementById('f-lote-pt').value = ''; document.getElementById('f-consumo-pref').value = ''; setLotes(null); populateRevisoSelect();
       selPresentacion.value = ''; otraWrap.style.display = 'none';
     }catch(e){ console.error(e); showToast('No se pudo guardar. Intenta de nuevo.'); }
     finally{ btn.disabled = false; btn.textContent = 'Guardar registro'; }
@@ -944,6 +1183,7 @@
     const presSet = new Set([...Object.keys(tasasIdeales), ...dpRecords.map(r=>r.presentacion).filter(Boolean)]);
     wrap.innerHTML = [...presSet].sort().map(p=>`<div class="field"><label>${p}</label><input type="number" min="0" class="oee-tasa-input" data-pres="${p}" value="${tasasIdeales[p]||''}" placeholder="pzas/hora"></div>`).join('');
     document.getElementById('oee-horas-efectivas').value = horasEfectivas;
+    document.getElementById('ppc-wrap').innerHTML = [...presSet].sort().map(p=>`<div class="field"><label>${esc(p)}</label><input type="number" min="0" class="ppc-input" data-pres="${esc(p)}" value="${piezasCaja[p]||''}" placeholder="pzas/caja"></div>`).join('');
   }
   document.getElementById('btn-oee-config').addEventListener('click', ()=>{
     const panel = document.getElementById('oee-config-panel');
@@ -955,6 +1195,8 @@
     const nuevasTasas = {};
     document.querySelectorAll('.oee-tasa-input').forEach(inp=>{ const v=Number(inp.value)||0; if(v>0) nuevasTasas[inp.dataset.pres]=v; });
     tasasIdeales = nuevasTasas;
+    const nuevasPpc = {}; document.querySelectorAll('.ppc-input').forEach(inp=>{ const v=Number(inp.value)||0; if(v>0) nuevasPpc[inp.dataset.pres]=v; });
+    piezasCaja = nuevasPpc; dpRemote.piezasCaja = piezasCaja;
     dpRemote.horasEfectivas = horasEfectivas; dpRemote.tasasIdeales = tasasIdeales; dpRemote.ts = Date.now();
     const status = document.getElementById('oee-config-status'); status.textContent = 'Guardando…';
     try{ await fbSave(DOC_DP, dpRemote); dpLastTs = dpRemote.ts; status.textContent = 'Configuración guardada ✓'; await dpRefreshAll(); }
@@ -1255,9 +1497,327 @@
   }
 
   /* ============================================================
+     ==========  INTEGRADO POR TURNO (Doy Pack)  ================
+     Une producción + defectos (ES-FOR-011) con paros (PSA-FOR-047)
+     usando la llave fecha + turno.
+  ============================================================ */
+  const TURNO_INV = {'Primero':'Turno 1','Segundo':'Turno 2','Tercero':'Turno 3'};
+  function turnoNorm(t){ return TURNO_INV[t] || t || '—'; }
+  let intPeriod = 'semana', intRangoIni = null, intRangoFin = null;
+  let chartIntCombo, chartIntP;
+
+  function computeOEE(prod, paros){
+    const turnos = new Set(prod.map(r=> r.fecha+'|'+r.turno));
+    const tProg = turnos.size * horasEfectivas;
+    const tPerd = paros.reduce((s,t)=> s + duracionHrs(t.horaIni, t.horaFin), 0);
+    const tOper = Math.max(tProg - tPerd, 0);
+    const bruta = prod.reduce((s,r)=> s+(Number(r.produccion)||0),0);
+    const neta  = prod.reduce((s,r)=> s+netaDe(r),0);
+    let tIdeal = 0, sinTasa = false;
+    for(const r of prod){ const tasa = tasasIdeales[r.presentacion]||0; if(tasa>0) tIdeal += (Number(r.produccion)||0)/tasa; else sinTasa = true; }
+    const disp = tProg>0 ? tOper/tProg : 0;
+    const rend = tOper>0 ? Math.min(tIdeal/tOper,1) : 0;
+    const cal  = bruta>0 ? neta/bruta : 0;
+    return {disp, rend, cal, oee: disp*rend*cal, tProg, tPerd, tOper, bruta, neta, sinTasa};
+  }
+
+  function intFiltros(){
+    const ref = document.getElementById('int-fecha-ref').value || todayISO();
+    const turno = document.getElementById('int-turno').value;
+    const enPeriodo = f=> isInPeriod(f, ref, intPeriod, intRangoIni, intRangoFin);
+    return {ref, turno, enPeriodo};
+  }
+
+  function intConstruirTurnos(ignorarTurno){
+    const {turno, enPeriodo} = intFiltros();
+    const prod = dpRecords.filter(r=> enPeriodo(r.fecha) && (ignorarTurno || !turno || r.turno===turno));
+    const paros = tpRecords.filter(t=> t.planta==='Doy pack' && enPeriodo(t.fecha) && (ignorarTurno || !turno || turnoNorm(t.turno)===turno));
+    const map = {};
+    const get = (f,tu)=>{ const k=f+'|'+tu; return map[k] = map[k] || {fecha:f, turno:tu, prod:[], paros:[]}; };
+    prod.forEach(r=> get(r.fecha, r.turno).prod.push(r));
+    paros.forEach(t=> get(t.fecha, turnoNorm(t.turno)).paros.push(t));
+    const filas = Object.values(map).map(s=>{
+      const bruta = s.prod.reduce((a,r)=> a+(Number(r.produccion)||0),0);
+      const def = s.prod.reduce((a,r)=> a+totalDefects(r),0);
+      const hrs = s.paros.reduce((a,t)=> a+duracionHrs(t.horaIni,t.horaFin),0);
+      const porTipo = {}; s.paros.forEach(t=>{ porTipo[t.tipo]=(porTipo[t.tipo]||0)+duracionHrs(t.horaIni,t.horaFin); });
+      const causa = Object.keys(porTipo).sort((a,b)=> porTipo[b]-porTipo[a])[0] || '';
+      const pres = [...new Set(s.prod.map(r=>r.presentacion).filter(Boolean))];
+      const tasaProm = s.prod.length ? s.prod.reduce((a,r)=> a+(tasasIdeales[r.presentacion]||0),0)/s.prod.length : 0;
+      const o = s.prod.length ? computeOEE(s.prod, s.paros) : null;
+      return {...s, bruta, neta: Math.max(bruta-def,0), def, pDef: bruta>0? def/bruta : null, hrs, nParos: s.paros.length, causa, pres, perdidas: hrs*tasaProm, o};
+    });
+    filas.sort((a,b)=> (a.fecha+a.turno).localeCompare(b.fecha+b.turno));
+    return {filas, prod, paros};
+  }
+
+  function estad(arr){
+    const v = arr.filter(x=> x!==null && x!==undefined && !isNaN(x));
+    const n = v.length; if(!n) return null;
+    const media = v.reduce((a,b)=>a+b,0)/n;
+    const sd = n>1 ? Math.sqrt(v.reduce((a,b)=>a+(b-media)**2,0)/(n-1)) : 0;
+    return {n, media, sd, min: Math.min(...v), max: Math.max(...v), cv: media ? sd/media : 0};
+  }
+  function pearson(xs, ys){
+    const pares = xs.map((x,i)=>[x,ys[i]]).filter(([x,y])=> x!==null && y!==null && !isNaN(x) && !isNaN(y));
+    const n = pares.length; if(n<3) return null;
+    const mx = pares.reduce((a,p)=>a+p[0],0)/n, my = pares.reduce((a,p)=>a+p[1],0)/n;
+    let sxy=0,sxx=0,syy=0; pares.forEach(([x,y])=>{ sxy+=(x-mx)*(y-my); sxx+=(x-mx)**2; syy+=(y-my)**2; });
+    return (sxx>0 && syy>0) ? {r: sxy/Math.sqrt(sxx*syy), n} : null;
+  }
+
+  async function intRefreshAll(){
+    const {ref, turno} = intFiltros();
+    const {filas, prod, paros} = intConstruirTurnos(false);
+    document.getElementById('int-period-label').textContent = getPeriodLabel(ref, intPeriod, intRangoIni, intRangoFin) + (turno? ' · '+turno : '');
+
+    /* ---- Totales ---- */
+    const o = computeOEE(prod, paros);
+    const def = prod.reduce((a,r)=> a+totalDefects(r),0);
+    const pDef = o.bruta>0 ? def/o.bruta : 0;
+    const perdidas = filas.reduce((a,f)=> a+f.perdidas,0);
+    const conProd = filas.filter(f=> f.o);
+    document.getElementById('int-hero-oee').textContent = pct(o.oee);
+    document.getElementById('int-disp').textContent = pct(o.disp);
+    document.getElementById('int-rend').textContent = pct(o.rend);
+    document.getElementById('int-cal').textContent = pct(o.cal);
+    document.getElementById('int-turnos').textContent = conProd.length;
+    document.getElementById('int-hero-sub').textContent = `Programado ${o.tProg.toFixed(1)} h · Perdido ${o.tPerd.toFixed(1)} h · Operativo ${o.tOper.toFixed(1)} h`;
+    document.getElementById('int-kpi-neta').innerHTML = fmt(o.neta) + ' <small>pzas</small>';
+    const kd = document.getElementById('int-kpi-def'); kd.innerHTML = fmt(def) + ' <small>pzas · ' + pct(pDef) + '</small>'; kd.className = 'kpi-value ' + (pDef>0.02?'warn':'');
+    document.getElementById('int-kpi-hrs').innerHTML = fmtH(o.tPerd) + ' <small>h · ' + paros.length + ' paro' + (paros.length!==1?'s':'') + '</small>';
+    document.getElementById('int-kpi-perdidas').innerHTML = fmt(perdidas) + ' <small>pzas</small>';
+
+    /* ---- Gráfico p: límites por turno ---- */
+    const pBar = o.bruta>0 ? def/o.bruta : 0;
+    const lim = conProd.map(f=>{ const s = f.bruta>0 ? Math.sqrt(pBar*(1-pBar)/f.bruta) : 0; return {lcs: pBar+3*s, lci: Math.max(pBar-3*s,0)}; });
+    const fueraIdx = new Set(conProd.map((f,i)=> f.pDef!==null && (f.pDef>lim[i].lcs || f.pDef<lim[i].lci) ? f.fecha+'|'+f.turno : null).filter(Boolean));
+
+    /* ---- Alertas ---- */
+    const alertas = [];
+    const sinProd = filas.filter(f=> !f.o);
+    if(sinProd.length) alertas.push(`⚠ ${sinProd.length} turno(s) con paros registrados pero sin registro de producción: ${sinProd.map(f=>f.fecha+' '+f.turno).join(', ')}. Sus horas no entran al OEE de turno.`);
+    if(fueraIdx.size) alertas.push(`🔴 ${fueraIdx.size} turno(s) fuera de los límites de control de % defectuoso — revisar causa asignable.`);
+    if(o.sinTasa) alertas.push('ℹ Hay presentaciones sin tasa ideal configurada; su rendimiento no se calcula. Configúralas en Dashboard Doy Pack → ⚙ Configurar tasas ideales.');
+    document.getElementById('int-alertas').innerHTML = alertas.map(a=>`<div class="panel" style="padding:11px 16px;margin-bottom:10px;font-size:12.5px;border-left:4px solid var(--amber);">${a}</div>`).join('');
+
+    /* ---- Tabla consolidada ---- */
+    const tb = document.getElementById('int-tbody'); tb.innerHTML = '';
+    document.getElementById('int-count').textContent = filas.length + ' turno' + (filas.length!==1?'s':'');
+    document.getElementById('int-empty').style.display = filas.length ? 'none' : 'block';
+    const pc = v=> v===null||v===undefined ? '—' : pct(v);
+    [...filas].reverse().forEach(f=>{
+      const fuera = fueraIdx.has(f.fecha+'|'+f.turno);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${f.fecha}</td><td>${f.turno}</td><td>${esc(f.pres.join(', ')) || '<span class="pill pill-warn">Sin producción</span>'}</td><td>${esc([...new Set(f.prod.map(r=>r.lotePT).filter(Boolean))].join(', '))||'—'}</td>
+        <td>${f.o?fmt(f.bruta):'—'}</td><td>${f.o?fmt(f.neta):'—'}</td><td>${f.o?fmt(f.def):'—'}</td>
+        <td>${f.pDef===null?'—':`<span class="pill ${f.pDef>0.02||fuera?'pill-warn':'pill-ok'}">${pct(f.pDef)}${fuera?' ●':''}</span>`}</td>
+        <td>${f.nParos}</td><td>${fmtH(f.hrs)}</td><td>${f.causa||'—'}</td>
+        <td>${pc(f.o&&f.o.disp)}</td><td>${pc(f.o&&f.o.rend)}</td><td>${pc(f.o&&f.o.cal)}</td>
+        <td>${f.o?`<b style="color:${f.o.oee>=0.85?'var(--green-dk)':f.o.oee>=0.6?'var(--amber)':'var(--red)'}">${pct(f.o.oee)}</b>`:'—'}</td>`;
+      tb.appendChild(tr);
+    });
+
+    /* ---- Gráficas ---- */
+    const labels = conProd.map(f=> f.fecha.substring(5)+' '+f.turno.replace('Turno ','T'));
+    const dCombo = { labels, datasets:[
+      {type:'bar', label:'Neta (pzas)', data: conProd.map(f=>f.neta), backgroundColor:'#2E8B45', borderRadius:5, maxBarThickness:40, yAxisID:'y'},
+      {type:'line', label:'OEE %', data: conProd.map(f=> +(f.o.oee*100).toFixed(1)), borderColor:'#14181C', backgroundColor:'#14181C', tension:.3, pointRadius:3, yAxisID:'y1'}
+    ]};
+    if(chartIntCombo){ chartIntCombo.data = dCombo; chartIntCombo.update(); }
+    else chartIntCombo = new Chart(document.getElementById('chart-int-combo').getContext('2d'), {data:dCombo, options:{plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}, scales:{y:{beginAtZero:true,grid:{color:'#EEF1F0'},ticks:{callback:v=>fmt(v)}}, y1:{position:'right',beginAtZero:true,max:100,grid:{display:false},ticks:{callback:v=>v+'%'}}, x:{grid:{display:false}}}}});
+
+    const dP = { labels, datasets:[
+      {label:'% def.', data: conProd.map(f=> f.pDef===null?null:+(f.pDef*100).toFixed(3)), borderColor:'#C0392B', backgroundColor: conProd.map(f=> fueraIdx.has(f.fecha+'|'+f.turno)?'#C0392B':'#fff'), pointRadius:4, tension:0},
+      {label:'p̄', data: conProd.map(()=> +(pBar*100).toFixed(3)), borderColor:'#2E8B45', borderDash:[4,4], pointRadius:0},
+      {label:'LCS', data: lim.map(l=> +(l.lcs*100).toFixed(3)), borderColor:'#8A8D91', borderDash:[2,3], pointRadius:0, stepped:'middle'},
+      {label:'LCI', data: lim.map(l=> +(l.lci*100).toFixed(3)), borderColor:'#8A8D91', borderDash:[2,3], pointRadius:0, stepped:'middle'}
+    ]};
+    if(chartIntP){ chartIntP.data = dP; chartIntP.update(); }
+    else chartIntP = new Chart(document.getElementById('chart-int-pchart').getContext('2d'), {type:'line', data:dP, options:{plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+'%'}}}, scales:{y:{beginAtZero:true,grid:{color:'#EEF1F0'},ticks:{callback:v=>v+'%'}}, x:{grid:{display:false}}}}});
+    document.getElementById('int-pchart-hint').textContent = `p̄ = ${pct(pBar)} · Límites a 3σ con tamaño de muestra variable (producción bruta del turno).`;
+
+    /* ---- Estadística descriptiva ---- */
+    const indic = [
+      ['Producción neta (pzas)', conProd.map(f=>f.neta), v=>fmt(v), false],
+      ['% defectuoso', conProd.map(f=>f.pDef), v=>pct(v), true],
+      ['Horas perdidas', filas.map(f=>f.hrs), v=>fmtH(v), false],
+      ['Paros por turno', filas.map(f=>f.nParos), v=>(Math.round(v*100)/100).toLocaleString('es-MX'), false],
+      ['Disponibilidad', conProd.map(f=>f.o.disp), v=>pct(v), true],
+      ['Rendimiento', conProd.map(f=>f.o.rend), v=>pct(v), true],
+      ['OEE', conProd.map(f=>f.o.oee), v=>pct(v), true]
+    ];
+    document.getElementById('int-stats').innerHTML = indic.map(([nom, arr, f])=>{
+      const s = estad(arr); if(!s) return `<tr><td>${nom}</td><td colspan="6" style="color:var(--ink-soft)">Sin datos</td></tr>`;
+      return `<tr><td><b>${nom}</b></td><td>${s.n}</td><td>${f(s.media)}</td><td>${f(s.sd)}</td><td>${f(s.min)}</td><td>${f(s.max)}</td><td>${(s.cv*100).toFixed(1)}%</td></tr>`;
+    }).join('');
+
+    /* ---- Comparativo entre turnos (ignora filtro de turno) ---- */
+    const todas = intConstruirTurnos(true).filas;
+    document.getElementById('int-comp').innerHTML = ['Turno 1','Turno 2','Turno 3'].map(t=>{
+      const fs = todas.filter(f=> f.turno===t), cp = fs.filter(f=>f.o);
+      if(!fs.length) return `<tr><td><b>${t}</b></td><td colspan="5" style="color:var(--ink-soft)">Sin datos</td></tr>`;
+      const br = cp.reduce((a,f)=>a+f.bruta,0), df = cp.reduce((a,f)=>a+f.def,0);
+      const oeeM = estad(cp.map(f=>f.o.oee));
+      return `<tr><td><b>${t}</b></td><td>${cp.length}</td><td>${cp.length?fmt(cp.reduce((a,f)=>a+f.neta,0)/cp.length):'—'}</td><td>${br>0?pct(df/br):'—'}</td><td>${fmtH(fs.reduce((a,f)=>a+f.hrs,0)/fs.length)}</td><td>${oeeM?pct(oeeM.media):'—'}</td></tr>`;
+    }).join('');
+
+    const c = pearson(conProd.map(f=>f.hrs), conProd.map(f=>f.pDef));
+    document.getElementById('int-corr').textContent = c
+      ? `Correlación horas perdidas ↔ % defectuoso: r = ${c.r.toFixed(2)} (n = ${c.n}) — ${Math.abs(c.r)>=0.7?'fuerte':Math.abs(c.r)>=0.4?'moderada':'débil'}${c.r<0?' (inversa)':''}. Indica asociación, no causa.`
+      : 'Correlación horas perdidas ↔ % defectuoso: se necesitan al menos 3 turnos con producción.';
+  }
+
+  function intSetPeriod(p){
+    intPeriod = p;
+    document.querySelectorAll('[data-int-period]').forEach(b=> b.classList.toggle('active', b.dataset.intPeriod===p));
+    document.getElementById('int-rango-wrap').style.display = p==='rango' ? 'flex' : 'none';
+    intRefreshAll();
+  }
+  document.querySelectorAll('[data-int-period]').forEach(b=> b.addEventListener('click', ()=> intSetPeriod(b.dataset.intPeriod)));
+  document.getElementById('int-fecha-ref').value = todayISO();
+  document.getElementById('int-fecha-ref').addEventListener('change', intRefreshAll);
+  document.getElementById('int-turno').addEventListener('change', intRefreshAll);
+  document.getElementById('int-rango-ini').addEventListener('change', e=>{ intRangoIni = e.target.value||null; if(intPeriod==='rango') intRefreshAll(); });
+  document.getElementById('int-rango-fin').addEventListener('change', e=>{ intRangoFin = e.target.value||null; if(intPeriod==='rango') intRefreshAll(); });
+  document.getElementById('btn-print-int').addEventListener('click', ()=> window.print());
+  document.getElementById('btn-int-limpiar').addEventListener('click', ()=>{
+    document.getElementById('int-fecha-ref').value = todayISO();
+    document.getElementById('int-turno').value = '';
+    document.getElementById('int-rango-ini').value = ''; document.getElementById('int-rango-fin').value = '';
+    intRangoIni = null; intRangoFin = null; intSetPeriod('semana');
+  });
+
+  /* ============================================================
+     =====================  MERMA  ==============================
+     % Merma = piezas con defecto ÷ piezas producidas (bruta)
+  ============================================================ */
+  document.querySelector('.app').appendChild(document.getElementById('tpl-mer').content.cloneNode(true));
+  let merPeriod = 'mes', merRangoIni = null, merRangoFin = null, chartMerDia, merUltimo = {dias:[], lotes:[]};
+  function gramosDe(pres){ const m = String(pres||'').match(/(\d+(?:[.,]\d+)?)\s*(?:g|gr|grs|gramos)\b/i); return m ? Number(m[1].replace(',','.')) : 0; }
+  function acumular(grupo, r){
+    grupo.bruta += Number(r.produccion)||0; grupo.neta += netaDe(r);
+    DEFECT_KEYS.forEach(k=> grupo[k] += Number(r[k])||0);
+    grupo.merma += totalDefects(r); grupo.kg += totalDefects(r)*gramosDe(r.presentacion)/1000;
+    grupo.turnos.add(r.fecha+'|'+r.turno);
+  }
+  const nuevoGrupo = extra=> ({bruta:0, neta:0, d1:0, d2:0, d3:0, d4:0, merma:0, kg:0, turnos:new Set(), ...extra});
+  const pMerma = g=> g.bruta>0 ? g.merma/g.bruta : 0;
+  const fmtKg = n=> (Math.round(n*100)/100).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  function merFiltrados(){
+    const ref = document.getElementById('mer-fecha-ref').value || todayISO();
+    const pres = document.getElementById('mer-presentacion').value;
+    const q = (document.getElementById('mer-lote').value||'').trim().toUpperCase();
+    return dpRecords.filter(r=> isInPeriod(r.fecha, ref, merPeriod, merRangoIni, merRangoFin)
+      && (!pres || r.presentacion===pres) && (!q || String(r.lotePT||'').toUpperCase().includes(q)));
+  }
+
+  async function merRefreshAll(){
+    const sel = document.getElementById('mer-presentacion'), cur = sel.value;
+    const presSet = [...new Set(dpRecords.map(r=>r.presentacion).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="">Todas</option>' + presSet.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+    sel.value = presSet.includes(cur) ? cur : '';
+
+    const list = merFiltrados();
+    const ref = document.getElementById('mer-fecha-ref').value || todayISO();
+    document.getElementById('mer-period-label').textContent = getPeriodLabel(ref, merPeriod, merRangoIni, merRangoFin);
+
+    const tot = nuevoGrupo(); const porDia = {}, porLote = {};
+    for(const r of list){
+      acumular(tot, r);
+      (porDia[r.fecha] = porDia[r.fecha] || nuevoGrupo({fecha:r.fecha, lotes:new Set()}));
+      acumular(porDia[r.fecha], r); if(r.lotePT) porDia[r.fecha].lotes.add(r.lotePT);
+      const k = r.lotePT || '— Sin lote —';
+      (porLote[k] = porLote[k] || nuevoGrupo({lote:k, pres:new Set(), fechas:new Set()}));
+      acumular(porLote[k], r); if(r.presentacion) porLote[k].pres.add(r.presentacion); porLote[k].fechas.add(r.fecha);
+    }
+    const dias = Object.values(porDia).sort((a,b)=> b.fecha.localeCompare(a.fecha));
+    const lotes = Object.values(porLote).sort((a,b)=> pMerma(b)-pMerma(a));
+    merUltimo = {dias, lotes};
+
+    /* KPIs */
+    const pt = pMerma(tot);
+    const hp = document.getElementById('mer-hero-pct'); hp.textContent = pct(pt);
+    document.getElementById('mer-hero-sub').textContent = fmt(tot.merma) + ' de ' + fmt(tot.bruta) + ' piezas producidas';
+    const lotesReales = lotes.filter(l=> l.lote !== '— Sin lote —');
+    document.getElementById('mer-hero-lotes').textContent = lotesReales.length;
+    document.getElementById('mer-hero-dias').textContent = dias.length;
+    document.getElementById('mer-hero-peor').textContent = lotesReales.length ? lotesReales[0].lote + ' · ' + pct(pMerma(lotesReales[0])) : '—';
+    document.getElementById('mer-kpi-bruta').innerHTML = fmt(tot.bruta) + ' <small>pzas</small>';
+    document.getElementById('mer-kpi-neta').innerHTML = fmt(tot.neta) + ' <small>pzas</small>';
+    const km = document.getElementById('mer-kpi-merma'); km.innerHTML = fmt(tot.merma) + ' <small>pzas · ' + pct(pt) + '</small>'; km.className = 'kpi-value ' + (pt>0.02?'warn':'');
+    document.getElementById('mer-kpi-kg').innerHTML = fmtKg(tot.kg) + ' <small>kg</small>';
+
+    const pill = p=> `<span class="pill ${p>0.02?'pill-warn':'pill-ok'}">${pct(p)}</span>`;
+    const celdasDef = g=> DEFECT_KEYS.map(k=>`<td>${fmt(g[k])}</td>`).join('');
+
+    /* Tabla por día */
+    document.getElementById('mer-dia-count').textContent = dias.length + ' día' + (dias.length!==1?'s':'');
+    document.getElementById('mer-dia-empty').style.display = dias.length ? 'none' : 'block';
+    document.getElementById('mer-dia-body').innerHTML = dias.map(d=>`<tr><td>${d.fecha}</td><td>${d.turnos.size}</td><td>${esc([...d.lotes].join(', '))||'—'}</td>
+      <td>${fmt(d.bruta)}</td><td>${fmt(d.neta)}</td>${celdasDef(d)}<td><b>${fmt(d.merma)}</b></td><td>${pill(pMerma(d))}</td><td>${fmtKg(d.kg)}</td></tr>`).join('');
+    document.getElementById('mer-dia-foot').innerHTML = dias.length ? `<tr style="font-weight:800;background:#F6F8F7;"><td>Total</td><td>${tot.turnos.size}</td><td>${lotesReales.length} lote(s)</td>
+      <td>${fmt(tot.bruta)}</td><td>${fmt(tot.neta)}</td>${celdasDef(tot)}<td>${fmt(tot.merma)}</td><td>${pill(pt)}</td><td>${fmtKg(tot.kg)}</td></tr>` : '';
+
+    /* Tabla por lote */
+    document.getElementById('mer-lote-count').textContent = lotesReales.length + ' lote' + (lotesReales.length!==1?'s':'') + (lotes.length>lotesReales.length?' + registros sin lote':'');
+    document.getElementById('mer-lote-empty').style.display = lotes.length ? 'none' : 'block';
+    document.getElementById('mer-lote-body').innerHTML = lotes.map(l=>{ const f=[...l.fechas].sort(); return `<tr>
+      <td><b>${l.lote==='— Sin lote —'?'<span class="pill pill-warn">Sin lote</span>':esc(l.lote)}</b></td><td>${esc([...l.pres].join(', '))}</td>
+      <td>${f[0]===f[f.length-1]?f[0]:f[0]+' → '+f[f.length-1]}</td><td>${l.turnos.size}</td>
+      <td>${fmt(l.bruta)}</td><td>${fmt(l.neta)}</td>${celdasDef(l)}<td><b>${fmt(l.merma)}</b></td><td>${pill(pMerma(l))}</td><td>${fmtKg(l.kg)}</td></tr>`; }).join('');
+
+    /* Gráfica diaria */
+    try{
+      const asc = [...dias].reverse();
+      const data = { labels: asc.map(d=>d.fecha.substring(5)), datasets:[
+        {type:'bar', label:'Merma (pzas)', data: asc.map(d=>d.merma), backgroundColor:'#C0392B', borderRadius:5, maxBarThickness:40, yAxisID:'y'},
+        {type:'line', label:'% Merma', data: asc.map(d=> +(pMerma(d)*100).toFixed(2)), borderColor:'#14181C', backgroundColor:'#14181C', tension:.3, pointRadius:3, yAxisID:'y1'}
+      ]};
+      if(chartMerDia){ chartMerDia.data = data; chartMerDia.update(); }
+      else chartMerDia = new Chart(document.getElementById('chart-mer-dia').getContext('2d'), {data, options:{maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}, scales:{y:{beginAtZero:true,grid:{color:'#EEF1F0'},ticks:{precision:0}}, y1:{position:'right',beginAtZero:true,grid:{display:false},ticks:{callback:v=>v+'%'}}, x:{grid:{display:false}}}}});
+    }catch(e){ console.error(e); }
+  }
+
+  function descargarCSV(nombre, filas){
+    const csv = filas.map(f=> f.map(v=> { const t = String(v==null?'':v); return /[",\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t; }).join(',')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'}));
+    a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+  }
+  const cabDef = ['Mal sellado','Mal codificado','Fuga de empaque','Peso fuera de espec.'];
+  document.getElementById('btn-csv-mer-dia').addEventListener('click', ()=>{
+    if(!merUltimo.dias.length){ showToast('No hay datos en el período'); return; }
+    descargarCSV('merma_por_dia.csv', [['Fecha','Turnos','Lotes PT','Bruta','Neta',...cabDef,'Merma pzas','% Merma','Kg merma'],
+      ...merUltimo.dias.map(d=>[d.fecha, d.turnos.size, [...d.lotes].join(' / '), d.bruta, d.neta, d.d1, d.d2, d.d3, d.d4, d.merma, (pMerma(d)*100).toFixed(2), d.kg.toFixed(2)])]);
+  });
+  document.getElementById('btn-csv-mer-lote').addEventListener('click', ()=>{
+    if(!merUltimo.lotes.length){ showToast('No hay datos en el período'); return; }
+    descargarCSV('merma_por_lote.csv', [['Lote PT','Presentación','Fechas','Turnos','Bruta','Neta',...cabDef,'Merma pzas','% Merma','Kg merma'],
+      ...merUltimo.lotes.map(l=>[l.lote, [...l.pres].join(' / '), [...l.fechas].sort().join(' / '), l.turnos.size, l.bruta, l.neta, l.d1, l.d2, l.d3, l.d4, l.merma, (pMerma(l)*100).toFixed(2), l.kg.toFixed(2)])]);
+  });
+  function merSetPeriod(p){
+    merPeriod = p;
+    document.querySelectorAll('[data-mer-period]').forEach(b=> b.classList.toggle('active', b.dataset.merPeriod===p));
+    document.getElementById('mer-rango-wrap').style.display = p==='rango' ? 'flex' : 'none';
+    merRefreshAll();
+  }
+  document.querySelectorAll('[data-mer-period]').forEach(b=> b.addEventListener('click', ()=> merSetPeriod(b.dataset.merPeriod)));
+  document.getElementById('mer-fecha-ref').value = todayISO();
+  ['mer-fecha-ref','mer-presentacion'].forEach(id=> document.getElementById(id).addEventListener('change', merRefreshAll));
+  document.getElementById('mer-lote').addEventListener('input', merRefreshAll);
+  document.getElementById('mer-rango-ini').addEventListener('change', e=>{ merRangoIni = e.target.value||null; if(merPeriod==='rango') merRefreshAll(); });
+  document.getElementById('mer-rango-fin').addEventListener('change', e=>{ merRangoFin = e.target.value||null; if(merPeriod==='rango') merRefreshAll(); });
+  document.getElementById('btn-print-mer').addEventListener('click', ()=> window.print());
+  document.getElementById('btn-mer-limpiar').addEventListener('click', ()=>{
+    document.getElementById('mer-fecha-ref').value = todayISO(); document.getElementById('mer-presentacion').value = ''; document.getElementById('mer-lote').value = '';
+    document.getElementById('mer-rango-ini').value = ''; document.getElementById('mer-rango-fin').value = ''; merRangoIni = merRangoFin = null; merSetPeriod('mes');
+  });
+
+  /* ============================================================
      NAVEGACIÓN PRINCIPAL Y MODALES
   ============================================================ */
-  const NAV_TOOLBAR = {'dp-grid':'toolbar-dp-grid','dp-dash':'toolbar-dp-dash','tp-grid':'toolbar-tp-grid','tp-dash':'toolbar-tp-dash'};
+  const NAV_TOOLBAR = {'dp-grid':'toolbar-dp-grid','dp-dash':'toolbar-dp-dash','tp-grid':'toolbar-tp-grid','tp-dash':'toolbar-tp-dash','int-dash':'toolbar-int-dash','mer-dash':'toolbar-mer-dash'};
   document.querySelectorAll('.navtab').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       document.querySelectorAll('.navtab').forEach(b=>b.classList.remove('active'));
@@ -1271,6 +1831,8 @@
       if(nav==='tp-dash') await tpRefreshAll();
       if(nav==='dp-grid') dpRefreshGrid();
       if(nav==='tp-grid') tpRefreshGrid();
+      if(nav==='int-dash') await intRefreshAll();
+      if(nav==='mer-dash') await merRefreshAll();
     });
   });
 
@@ -1307,6 +1869,12 @@
         if(r.realizo && !operadores.includes(r.realizo)){ operadores.push(r.realizo); populateOperadorSelect(selRealizo); }
         selRealizo.value = r.realizo || '';
         realizoOtroWrap.style.display = 'none';
+        document.getElementById('f-lote-pt').value = r.lotePT || '';
+        document.getElementById('f-consumo-pref').value = r.consumoPref || '';
+        setLotes(r);
+        if(r.reviso && !revisores.includes(r.reviso)) revisores.push(r.reviso);
+        populateRevisoSelect(r.reviso || '');
+        actualizarNeta();
       }
     }else{
       modalTitle.textContent = '➕ Nuevo registro de turno — Doy Pack';
@@ -1315,7 +1883,9 @@
       document.getElementById('f-turno').value = 'Turno 1';
       selPresentacion.value = ''; otraWrap.style.display = 'none';
       document.getElementById('f-presentacion-otra').value = '';
-      ['f-produccion-neta','f-produccion','f-obs','f-d1','f-d2','f-d3','f-d4'].forEach(id=> document.getElementById(id).value = '');
+      ['f-produccion-neta','f-produccion','f-cajas','f-obs','f-d1','f-d2','f-d3','f-d4','f-lote-pt','f-consumo-pref'].forEach(id=> document.getElementById(id).value = '');
+      document.querySelectorAll('.lote-field input').forEach(i=> i.value='');
+      setLotes(null); populateRevisoSelect();
       selRealizo.value = ''; realizoOtroWrap.style.display = 'none';
     }
     document.getElementById('dp-modal-overlay').classList.add('show');
@@ -1332,6 +1902,49 @@
   document.getElementById('dp-modal-cancel').addEventListener('click', closeDpModal);
   document.getElementById('dp-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='dp-modal-overlay') closeDpModal(); });
   document.getElementById('btn-refresh-dp1').addEventListener('click', async ()=>{ await dpFetchAndApply(); dpRefreshGrid(); showToast('Actualizado'); });
+  document.getElementById('dp-buscar-lote').addEventListener('input', ()=> dpRefreshGrid());
+
+  /* ---- Impresión ES-FOR-016 Ver. 3 · Reporte de producción (Doy Pack) ---- */
+  document.getElementById('dp-fecha-016').value = todayISO();
+  document.getElementById('btn-print-016').addEventListener('click', ()=>{
+    const fecha = document.getElementById('dp-fecha-016').value || todayISO();
+    const regs = dpRecords.filter(r=> r.fecha === fecha).sort((a,b)=> (a.turno||'').localeCompare(b.turno||''));
+    if(!regs.length){ showToast('No hay registros de Doy Pack el ' + fecha); return; }
+    const [y,m,d] = fecha.split('-');
+    const uniq = arr=> [...new Set(arr.filter(Boolean))];
+    const filas = regs.map(r=>`<tr>
+      <td>Doy Pack</td><td>${esc(TURNO_MAP[r.turno]||r.turno)}</td><td>${esc(r.presentacion)}</td>
+      <td><b>${esc(r.lotePT||'—')}</b>${r.consumoPref?'<br><small>CP: '+r.consumoPref.split('-').reverse().join('/')+'</small>':''}</td>
+      <td class="num">${fmtCajas(r)} <small>CA</small><br><small>${fmt(netaDe(r))} pzas</small></td>
+      <td>${esc(lotesTxt(r.lotesBobina))||'—'}</td><td>${esc(lotesTxt(r.lotesBolsa))||'—'}</td><td>${esc(lotesTxt(r.lotesCaja))||'—'}</td></tr>`).join('');
+    const obs = regs.filter(r=>r.obs).map(r=> `<b>${esc(TURNO_MAP[r.turno]||r.turno)}:</b> ${esc(r.obs)}`).join('<br>');
+    const realizo = uniq(regs.map(r=>r.realizo)).join(', ');
+    const reviso = uniq(regs.map(r=>r.reviso)).join(', ');
+    const w = window.open('', '_blank');
+    if(!w){ showToast('Permite ventanas emergentes para imprimir'); return; }
+    w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>ES-FOR-016 ${fecha}</title>
+      <style>
+        @page{size:letter landscape;margin:12mm;}
+        body{font-family:Calibri,Arial,sans-serif;color:#000;font-size:12px;margin:0;}
+        .tit{border:1.5px solid #000;text-align:center;font-weight:700;font-size:15px;padding:6px;margin-bottom:12px;}
+        .fecha{margin-bottom:10px;font-weight:700;} .fecha span{display:inline-block;min-width:140px;border-bottom:1px solid #000;font-weight:400;padding:0 6px;}
+        table{width:100%;border-collapse:collapse;} th,td{border:1px solid #000;padding:5px 6px;vertical-align:top;}
+        th{background:#BFBFBF;font-size:11px;} td.num{text-align:right;} small{color:#333;}
+        .obs-h{background:#BFBFBF;border:1px solid #000;border-bottom:none;font-weight:700;padding:4px 6px;margin-top:14px;}
+        .obs{border:1px solid #000;min-height:70px;padding:6px;}
+        .firmas{display:flex;gap:60px;margin-top:28px;} .firmas div{flex:0 0 260px;} .firmas span{display:block;border-bottom:1px solid #000;min-height:18px;padding:0 4px;}
+      </style></head><body>
+      <div class="tit">ES-FOR-016 Ver. 3 / Reporte de producción Stick y Doy Pack</div>
+      <div class="fecha">Fecha: <span>${d}/${m}/${y}</span></div>
+      <table><thead>
+        <tr><th rowspan="2">Proceso</th><th rowspan="2">Turno</th><th rowspan="2">Presentación</th><th rowspan="2">Lote de producción y consumo preferente</th><th rowspan="2">Cantidad producida<br>Doy Pack (CA)</th><th colspan="3">Material de empaque</th></tr>
+        <tr><th>Lote de bobina</th><th>Lote de bolsa</th><th>Lote de caja</th></tr>
+      </thead><tbody>${filas}</tbody></table>
+      <div class="obs-h">Observaciones</div><div class="obs">${obs||'&nbsp;'}</div>
+      <div class="firmas"><div>Realizó: <span>${esc(realizo)}</span></div><div>Revisó: <span>${esc(reviso)}</span></div></div>
+      <script>window.onload=()=>window.print();<\/script></body></html>`);
+    w.document.close();
+  });
 
   let tpEditingId = null;
 
@@ -1396,7 +2009,8 @@
         const [dDp, dTp] = await Promise.all([fbGet(DOC_DP), fbGet(DOC_TP)]);
         let cambioDp=false, cambioTp=false;
         if(dDp && Number(dDp.ts||0) > dpLastTs){
-          dpRemote = { records: Array.isArray(dDp.records)?dDp.records:[], operadores: Array.isArray(dDp.operadores)&&dDp.operadores.length?dDp.operadores:operadores, tasasIdeales:(dDp.tasasIdeales&&Object.keys(dDp.tasasIdeales).length)?dDp.tasasIdeales:tasasIdeales, horasEfectivas:Number(dDp.horasEfectivas)>0?Number(dDp.horasEfectivas):horasEfectivas, ts:Number(dDp.ts)||0 };
+          dpRemote = { records: Array.isArray(dDp.records)?dDp.records:[], operadores: Array.isArray(dDp.operadores)&&dDp.operadores.length?dDp.operadores:operadores, tasasIdeales:(dDp.tasasIdeales&&Object.keys(dDp.tasasIdeales).length)?dDp.tasasIdeales:tasasIdeales, horasEfectivas:Number(dDp.horasEfectivas)>0?Number(dDp.horasEfectivas):horasEfectivas, piezasCaja:(dDp.piezasCaja&&typeof dDp.piezasCaja==='object')?dDp.piezasCaja:{}, revisores:Array.isArray(dDp.revisores)?dDp.revisores:[], ts:Number(dDp.ts)||0 };
+          piezasCaja = dpRemote.piezasCaja; revisores = dpRemote.revisores; populateRevisoSelect(selReviso.value);
           operadores = dpRemote.operadores; tasasIdeales = dpRemote.tasasIdeales; horasEfectivas = dpRemote.horasEfectivas;
           dpRecords = dpRemote.records.map(r=>({...r,_key:r.id}));
           dpRecords.sort((a,b)=> (a.fecha+a.turno).localeCompare(b.fecha+b.turno));
@@ -1415,6 +2029,8 @@
           if(activeNav==='dp-dash') await dpRefreshAll();
           if(activeNav==='tp-grid') tpRefreshGrid();
           if(activeNav==='tp-dash') await tpRefreshAll();
+          if(activeNav==='int-dash') await intRefreshAll();
+          if(activeNav==='mer-dash') await merRefreshAll();
         }
         setSyncStatus('☁ Sincronizado', true);
       }catch(e){ setSyncStatus('Sin conexión', false); }
