@@ -151,6 +151,8 @@
   .lote-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
   .lote-chip{background:var(--green-lt);color:var(--green-dk);border-radius:999px;padding:3px 6px 3px 11px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;}
   .lote-chip button{border:none;background:none;color:var(--green-dk);cursor:pointer;font-size:13px;line-height:1;padding:0 3px;}
+  .cfg-tabla input{width:110px;padding:6px 8px;border:1.5px solid var(--line);border-radius:6px;font-size:12.5px;background:#FFFDE7;color:#0000C8;font-weight:600;}
+  .origen-ej{color:var(--red);font-weight:700;} .origen-ok{color:var(--green-dk);font-weight:700;}
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--navy);color:#fff;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:all .25s ease;z-index:300;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
   .empty{text-align:center;padding:16px;color:var(--ink-soft);font-size:12.5px;}
@@ -283,10 +285,11 @@
       </div>
       <div id="oee-config-panel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);">
         <div class="field" style="max-width:240px;"><label>Horas efectivas por turno</label><input type="number" min="0" step="0.1" id="oee-horas-efectivas"></div>
-        <label style="display:block;margin:10px 0 6px;font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Tasa ideal (piezas/hora) por presentación</label>
-        <div id="oee-tasas-wrap" class="grid3" style="margin-bottom:10px;"></div>
-        <label style="display:block;margin:10px 0 6px;font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Piezas por caja por presentación (ES-FOR-016)</label>
-        <div id="ppc-wrap" class="grid3" style="margin-bottom:10px;"></div>
+        <label style="display:block;margin:14px 0 4px;font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Tasas ideales por presentación</label>
+        <p class="panel-hint" style="margin:0 0 8px;">Captura la <b>velocidad nominal real</b> de la envasadora en pzas/min. Si la dejas vacía, se usa la tasa del sistema (valor de ejemplo).</p>
+        <div class="grid-scroll" style="margin-bottom:12px;border:1px solid var(--line);border-radius:8px;">
+          <table class="grid cfg-tabla"><thead><tr><th>Presentación</th><th>Tasa del sistema (pzas/h)</th><th>Velocidad nominal real (pzas/min)</th><th>Tasa a usar (pzas/h)</th><th>Origen</th><th>Piezas por caja</th></tr></thead><tbody id="oee-tasas-wrap"></tbody></table>
+        </div>
         <button class="btn btn-primary" id="btn-oee-guardar" style="padding:9px 16px;font-size:12.5px;">Guardar configuración</button>
         <span id="oee-config-status" style="font-size:11.5px;color:var(--ink-soft);margin-left:8px;"></span>
       </div>
@@ -304,7 +307,18 @@
         <div class="hero-mini"><span id="oee-calidad">0%</span><small>Calidad</small></div>
       </div>
     </div>
-    <p class="panel-hint dash-print-hide" style="margin:-8px 0 14px;" id="oee-detalle-txt"></p>
+    <div id="oee-alerta"></div>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="gridcard" style="margin:0;">
+        <div class="grid-title-bar"><div class="grid-title">Cálculo del OEE — desglose</div><div class="grid-count" id="oee-turnos-txt">0 turnos</div></div>
+        <div class="grid-scroll"><table class="grid"><thead><tr><th>Concepto</th><th style="text-align:right;">Valor</th><th>Cómo se obtiene</th></tr></thead><tbody id="oee-desglose"></tbody></table></div>
+      </div>
+      <div class="gridcard" style="margin:0;">
+        <div class="grid-title-bar"><div class="grid-title">Tiempo ideal por presentación</div></div>
+        <div class="grid-scroll"><table class="grid"><thead><tr><th>Presentación</th><th style="text-align:right;">Bruta</th><th style="text-align:right;">Tasa (pzas/h)</th><th>Origen</th><th style="text-align:right;">T. ideal (h)</th></tr></thead><tbody id="oee-por-pres"></tbody></table></div>
+        <div class="grid-empty" id="oee-por-pres-empty" style="display:none;">Sin producción en el período.</div>
+      </div>
+    </div>
 
     <div class="grid2">
       <div class="panel"><div class="panel-title">Defectos por tipo</div><p class="panel-hint">Piezas acumuladas por tipo de defecto.</p><div class="chart-box"><canvas id="chart-tipos"></canvas></div></div>
@@ -811,9 +825,12 @@
   let tasasIdeales = {...DEFAULT_TASAS};
   let horasEfectivas = DEFAULT_HORAS_EFECTIVAS;
   let chartTipos, chartPresentacion, chartTendencia;
+  let velNominal = {};      // velocidad nominal real por presentación (pzas/min)
+  function tasaDe(p){ const v = Number(velNominal[p])||0; return v>0 ? v*60 : (Number(tasasIdeales[p])||0); }
+  function origenDe(p){ return (Number(velNominal[p])||0)>0 ? 'nominal' : ((Number(tasasIdeales[p])||0)>0 ? 'ejemplo' : 'falta'); }
   let piezasCaja = {};      // piezas por caja por presentación (ES-FOR-016 reporta Doy Pack en cajas)
   let revisores = [];       // quién revisa el reporte de producción
-  let dpRemote = { records:[], operadores: operadores.slice(), tasasIdeales:{...tasasIdeales}, horasEfectivas, piezasCaja:{}, revisores:[], ts:0 };
+  let dpRemote = { records:[], operadores: operadores.slice(), tasasIdeales:{...tasasIdeales}, horasEfectivas, piezasCaja:{}, revisores:[], velNominal:{}, ts:0 };
   let dpLastTs = 0;
 
   function totalDefects(r){ return DEFECT_KEYS.reduce((s,k)=> s + (Number(r[k])||0), 0); }
@@ -831,7 +848,7 @@
   async function dpFetchAndApply(){
     const d = await fbGet(DOC_DP);
     if(!d){
-      dpRemote = { records:[], operadores: operadores.slice(), tasasIdeales:{...tasasIdeales}, horasEfectivas, piezasCaja:{}, revisores:[], ts: Date.now() };
+      dpRemote = { records:[], operadores: operadores.slice(), tasasIdeales:{...tasasIdeales}, horasEfectivas, piezasCaja:{}, revisores:[], velNominal:{}, ts: Date.now() };
       await fbSave(DOC_DP, dpRemote);
     }else{
       dpRemote = {
@@ -841,10 +858,11 @@
         horasEfectivas: Number(d.horasEfectivas) > 0 ? Number(d.horasEfectivas) : horasEfectivas,
         piezasCaja: (d.piezasCaja && typeof d.piezasCaja==='object') ? d.piezasCaja : {},
         revisores: Array.isArray(d.revisores) ? d.revisores : [],
+        velNominal: (d.velNominal && typeof d.velNominal==='object') ? d.velNominal : {},
         ts: Number(d.ts)||0
       };
     }
-    piezasCaja = dpRemote.piezasCaja; revisores = dpRemote.revisores;
+    piezasCaja = dpRemote.piezasCaja; revisores = dpRemote.revisores; velNominal = dpRemote.velNominal;
     operadores = dpRemote.operadores;
     tasasIdeales = dpRemote.tasasIdeales;
     horasEfectivas = dpRemote.horasEfectivas;
@@ -1168,22 +1186,68 @@
     const brutaTotal = list.reduce((s,r)=> s+(Number(r.produccion)||0),0);
     const netaTotal = list.reduce((s,r)=> s+netaDe(r),0);
     const calidad = brutaTotal>0 ? netaTotal/brutaTotal : 0;
-    let tiempoIdealHrs = 0;
-    for(const r of list){ const tasa = tasasIdeales[r.presentacion]||0; if(tasa>0) tiempoIdealHrs += (Number(r.produccion)||0)/tasa; }
-    const rendimiento = tiempoOperativo>0 ? Math.min(tiempoIdealHrs/tiempoOperativo,1) : 0;
+    let tiempoIdealHrs = 0; const porPres = {};
+    for(const r of list){
+      const p = r.presentacion||'—', tasa = tasaDe(p), b = Number(r.produccion)||0;
+      porPres[p] = porPres[p] || {bruta:0, tasa, origen: origenDe(p), ideal:0};
+      porPres[p].bruta += b; if(tasa>0){ porPres[p].ideal += b/tasa; tiempoIdealHrs += b/tasa; }
+    }
+    const rendSinTope = tiempoOperativo>0 ? tiempoIdealHrs/tiempoOperativo : 0;
+    const rendimiento = Math.min(rendSinTope,1);
     const oee = disponibilidad*rendimiento*calidad;
+    const tasaPond = tiempoIdealHrs>0 ? brutaTotal/tiempoIdealHrs : 0;
     document.getElementById('hero-oee').textContent = pct(oee);
     document.getElementById('oee-disp').textContent = pct(disponibilidad);
     document.getElementById('oee-rend').textContent = pct(rendimiento);
     document.getElementById('oee-calidad').textContent = pct(calidad);
-    document.getElementById('oee-detalle-txt').textContent = `Tiempo programado: ${tiempoProgramado.toFixed(1)} hrs · Tiempo perdido: ${tiempoPerdido.toFixed(1)} hrs · Tiempo operativo: ${tiempoOperativo.toFixed(1)} hrs · ${turnosUnicos.size} turno${turnosUnicos.size!==1?'s':''}.`;
+    document.getElementById('oee-rend').textContent = pct(rendimiento) + (rendSinTope>1 ? ' ⚠' : '');
+    document.getElementById('oee-turnos-txt').textContent = turnosUnicos.size + ' turno' + (turnosUnicos.size!==1?'s':'');
+    const h = n=> n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' h';
+    const filas = [
+      ['sec','Tiempos'],
+      ['Turnos con producción', fmt(turnosUnicos.size), 'Turnos distintos (fecha + turno) capturados en el período'],
+      ['Horas efectivas por turno', h(horasEfectivas), 'Configuración (⚙ Configurar tasas ideales)'],
+      ['Tiempo programado', h(tiempoProgramado), 'Turnos × horas efectivas'],
+      ['Tiempo perdido', h(tiempoPerdido) + ' · ' + Math.round(tiempoPerdido*60) + ' min', tiempos.length + ' paro(s) de Doy pack en Tiempos Perdidos'],
+      ['Tiempo operativo', h(tiempoOperativo), 'Programado − perdido'],
+      ['Producción bruta', fmt(brutaTotal) + ' pzas', 'Neta + defectos'],
+      ['Tasa ideal (ponderada)', tasaPond ? fmt(tasaPond) + ' pzas/h' : '—', 'Ver tabla por presentación'],
+      ['Tiempo ideal', h(tiempoIdealHrs), 'Producción bruta ÷ tasa ideal'],
+      ['Piezas buenas (neta)', fmt(netaTotal) + ' pzas', 'Bruta − defectos'],
+      ['sec','Factores'],
+      ['Disponibilidad', pct(disponibilidad), 'Tiempo operativo ÷ tiempo programado'],
+      ['Rendimiento sin tope', pct(rendSinTope), 'Tiempo ideal ÷ tiempo operativo', rendSinTope>1],
+      ['Rendimiento usado', pct(rendimiento), 'Sin tope, limitado a 100%'],
+      ['Calidad', pct(calidad), 'Piezas buenas ÷ producción bruta'],
+      ['OEE', pct(oee), 'Disponibilidad × Rendimiento × Calidad', false, true]
+    ];
+    document.getElementById('oee-desglose').innerHTML = filas.map(f=> f[0]==='sec'
+      ? `<tr><td colspan="3" style="background:#EFF2F1;font-size:10.5px;font-weight:800;text-transform:uppercase;color:var(--ink-soft);">${f[1]}</td></tr>`
+      : `<tr${f[4]?' style="background:var(--green-lt)"':''}><td><b>${f[0]}</b></td><td style="text-align:right;font-weight:${f[4]?800:600};${f[3]?'color:var(--red);':''}">${f[1]}${f[3]?' ⚠':''}</td><td style="color:var(--ink-soft);font-size:12px;white-space:normal;">${f[2]}</td></tr>`).join('');
+    const pres = Object.keys(porPres).sort();
+    document.getElementById('oee-por-pres-empty').style.display = pres.length ? 'none' : 'block';
+    const ORIG = {nominal:'<span class="origen-ok">Nominal real</span>', ejemplo:'<span class="origen-ej">Ejemplo — revisar</span>', falta:'<span class="origen-ej">Sin tasa</span>'};
+    document.getElementById('oee-por-pres').innerHTML = pres.map(p=>{ const x=porPres[p]; return `<tr><td>${esc(p)}</td><td style="text-align:right;">${fmt(x.bruta)}</td><td style="text-align:right;">${x.tasa?fmt(x.tasa):'—'}</td><td>${ORIG[x.origen]}</td><td style="text-align:right;">${x.ideal.toFixed(2)}</td></tr>`; }).join('');
+    const alertas = [];
+    if(rendSinTope>1) alertas.push(`⚠ El rendimiento real calculado es de <b>${pct(rendSinTope)}</b> (se muestra topado en 100%). La tasa ideal o las horas efectivas no corresponden a la realidad.`);
+    if(pres.some(p=> porPres[p].origen!=='nominal')) alertas.push('ℹ Hay presentaciones con tasa de ejemplo o sin tasa. Captura la velocidad nominal real en ⚙ Configurar tasas ideales.');
+    document.getElementById('oee-alerta').innerHTML = alertas.map(a=>`<div class="panel" style="padding:11px 16px;margin:-6px 0 12px;font-size:12.5px;border-left:4px solid var(--amber);">${a}</div>`).join('');
   }
   function renderOeeConfigPanel(){
     const wrap = document.getElementById('oee-tasas-wrap');
     const presSet = new Set([...Object.keys(tasasIdeales), ...dpRecords.map(r=>r.presentacion).filter(Boolean)]);
-    wrap.innerHTML = [...presSet].sort().map(p=>`<div class="field"><label>${p}</label><input type="number" min="0" class="oee-tasa-input" data-pres="${p}" value="${tasasIdeales[p]||''}" placeholder="pzas/hora"></div>`).join('');
+    wrap.innerHTML = [...presSet].sort().map(p=>`<tr data-pres="${esc(p)}"><td><b>${esc(p)}</b></td>
+      <td><input type="number" min="0" class="oee-tasa-input" data-pres="${esc(p)}" value="${tasasIdeales[p]||''}" placeholder="pzas/h"></td>
+      <td><input type="number" min="0" step="0.1" class="vel-input" data-pres="${esc(p)}" value="${velNominal[p]||''}" placeholder="pzas/min"></td>
+      <td class="tasa-usar" style="font-weight:700;"></td><td class="tasa-origen"></td>
+      <td><input type="number" min="0" class="ppc-input" data-pres="${esc(p)}" value="${piezasCaja[p]||''}" placeholder="pzas/caja"></td></tr>`).join('');
+    const vivo = ()=> wrap.querySelectorAll('tr').forEach(tr=>{
+      const t = Number(tr.querySelector('.oee-tasa-input').value)||0, v = Number(tr.querySelector('.vel-input').value)||0;
+      tr.querySelector('.tasa-usar').textContent = v>0 ? fmt(v*60) : (t>0 ? fmt(t) : '—');
+      tr.querySelector('.tasa-origen').innerHTML = v>0 ? '<span class="origen-ok">Nominal real</span>' : (t>0 ? '<span class="origen-ej">Ejemplo — revisar</span>' : '<span class="origen-ej">Sin tasa</span>');
+    });
+    wrap.querySelectorAll('input').forEach(i=> i.addEventListener('input', vivo)); vivo();
     document.getElementById('oee-horas-efectivas').value = horasEfectivas;
-    document.getElementById('ppc-wrap').innerHTML = [...presSet].sort().map(p=>`<div class="field"><label>${esc(p)}</label><input type="number" min="0" class="ppc-input" data-pres="${esc(p)}" value="${piezasCaja[p]||''}" placeholder="pzas/caja"></div>`).join('');
   }
   document.getElementById('btn-oee-config').addEventListener('click', ()=>{
     const panel = document.getElementById('oee-config-panel');
@@ -1197,6 +1261,8 @@
     tasasIdeales = nuevasTasas;
     const nuevasPpc = {}; document.querySelectorAll('.ppc-input').forEach(inp=>{ const v=Number(inp.value)||0; if(v>0) nuevasPpc[inp.dataset.pres]=v; });
     piezasCaja = nuevasPpc; dpRemote.piezasCaja = piezasCaja;
+    const nuevasVel = {}; document.querySelectorAll('.vel-input').forEach(inp=>{ const v=Number(inp.value)||0; if(v>0) nuevasVel[inp.dataset.pres]=v; });
+    velNominal = nuevasVel; dpRemote.velNominal = velNominal;
     dpRemote.horasEfectivas = horasEfectivas; dpRemote.tasasIdeales = tasasIdeales; dpRemote.ts = Date.now();
     const status = document.getElementById('oee-config-status'); status.textContent = 'Guardando…';
     try{ await fbSave(DOC_DP, dpRemote); dpLastTs = dpRemote.ts; status.textContent = 'Configuración guardada ✓'; await dpRefreshAll(); }
@@ -1514,11 +1580,12 @@
     const bruta = prod.reduce((s,r)=> s+(Number(r.produccion)||0),0);
     const neta  = prod.reduce((s,r)=> s+netaDe(r),0);
     let tIdeal = 0, sinTasa = false;
-    for(const r of prod){ const tasa = tasasIdeales[r.presentacion]||0; if(tasa>0) tIdeal += (Number(r.produccion)||0)/tasa; else sinTasa = true; }
+    for(const r of prod){ const tasa = tasaDe(r.presentacion); if(tasa>0) tIdeal += (Number(r.produccion)||0)/tasa; else sinTasa = true; }
     const disp = tProg>0 ? tOper/tProg : 0;
-    const rend = tOper>0 ? Math.min(tIdeal/tOper,1) : 0;
+    const rendSinTope = tOper>0 ? tIdeal/tOper : 0;
+    const rend = Math.min(rendSinTope,1);
     const cal  = bruta>0 ? neta/bruta : 0;
-    return {disp, rend, cal, oee: disp*rend*cal, tProg, tPerd, tOper, bruta, neta, sinTasa};
+    return {disp, rend, rendSinTope, cal, oee: disp*rend*cal, tProg, tPerd, tOper, bruta, neta, sinTasa};
   }
 
   function intFiltros(){
@@ -1543,7 +1610,7 @@
       const porTipo = {}; s.paros.forEach(t=>{ porTipo[t.tipo]=(porTipo[t.tipo]||0)+duracionHrs(t.horaIni,t.horaFin); });
       const causa = Object.keys(porTipo).sort((a,b)=> porTipo[b]-porTipo[a])[0] || '';
       const pres = [...new Set(s.prod.map(r=>r.presentacion).filter(Boolean))];
-      const tasaProm = s.prod.length ? s.prod.reduce((a,r)=> a+(tasasIdeales[r.presentacion]||0),0)/s.prod.length : 0;
+      const tasaProm = s.prod.length ? s.prod.reduce((a,r)=> a+tasaDe(r.presentacion),0)/s.prod.length : 0;
       const o = s.prod.length ? computeOEE(s.prod, s.paros) : null;
       return {...s, bruta, neta: Math.max(bruta-def,0), def, pDef: bruta>0? def/bruta : null, hrs, nParos: s.paros.length, causa, pres, perdidas: hrs*tasaProm, o};
     });
@@ -1598,6 +1665,8 @@
     const sinProd = filas.filter(f=> !f.o);
     if(sinProd.length) alertas.push(`⚠ ${sinProd.length} turno(s) con paros registrados pero sin registro de producción: ${sinProd.map(f=>f.fecha+' '+f.turno).join(', ')}. Sus horas no entran al OEE de turno.`);
     if(fueraIdx.size) alertas.push(`🔴 ${fueraIdx.size} turno(s) fuera de los límites de control de % defectuoso — revisar causa asignable.`);
+    const sobre = conProd.filter(f=> f.o.rendSinTope>1);
+    if(o.rendSinTope>1 || sobre.length) alertas.push(`⚠ Rendimiento real por encima de 100% (${o.rendSinTope>1?'período: '+pct(o.rendSinTope)+' · ':''}${sobre.length} turno(s)). Se muestra topado en 100%; revisa la tasa ideal o las horas efectivas. El desglose completo está en Dashboard Doy Pack.`);
     if(o.sinTasa) alertas.push('ℹ Hay presentaciones sin tasa ideal configurada; su rendimiento no se calcula. Configúralas en Dashboard Doy Pack → ⚙ Configurar tasas ideales.');
     document.getElementById('int-alertas').innerHTML = alertas.map(a=>`<div class="panel" style="padding:11px 16px;margin-bottom:10px;font-size:12.5px;border-left:4px solid var(--amber);">${a}</div>`).join('');
 
@@ -2009,8 +2078,8 @@
         const [dDp, dTp] = await Promise.all([fbGet(DOC_DP), fbGet(DOC_TP)]);
         let cambioDp=false, cambioTp=false;
         if(dDp && Number(dDp.ts||0) > dpLastTs){
-          dpRemote = { records: Array.isArray(dDp.records)?dDp.records:[], operadores: Array.isArray(dDp.operadores)&&dDp.operadores.length?dDp.operadores:operadores, tasasIdeales:(dDp.tasasIdeales&&Object.keys(dDp.tasasIdeales).length)?dDp.tasasIdeales:tasasIdeales, horasEfectivas:Number(dDp.horasEfectivas)>0?Number(dDp.horasEfectivas):horasEfectivas, piezasCaja:(dDp.piezasCaja&&typeof dDp.piezasCaja==='object')?dDp.piezasCaja:{}, revisores:Array.isArray(dDp.revisores)?dDp.revisores:[], ts:Number(dDp.ts)||0 };
-          piezasCaja = dpRemote.piezasCaja; revisores = dpRemote.revisores; populateRevisoSelect(selReviso.value);
+          dpRemote = { records: Array.isArray(dDp.records)?dDp.records:[], operadores: Array.isArray(dDp.operadores)&&dDp.operadores.length?dDp.operadores:operadores, tasasIdeales:(dDp.tasasIdeales&&Object.keys(dDp.tasasIdeales).length)?dDp.tasasIdeales:tasasIdeales, horasEfectivas:Number(dDp.horasEfectivas)>0?Number(dDp.horasEfectivas):horasEfectivas, piezasCaja:(dDp.piezasCaja&&typeof dDp.piezasCaja==='object')?dDp.piezasCaja:{}, revisores:Array.isArray(dDp.revisores)?dDp.revisores:[], velNominal:(dDp.velNominal&&typeof dDp.velNominal==='object')?dDp.velNominal:{}, ts:Number(dDp.ts)||0 };
+          velNominal = dpRemote.velNominal; piezasCaja = dpRemote.piezasCaja; revisores = dpRemote.revisores; populateRevisoSelect(selReviso.value);
           operadores = dpRemote.operadores; tasasIdeales = dpRemote.tasasIdeales; horasEfectivas = dpRemote.horasEfectivas;
           dpRecords = dpRemote.records.map(r=>({...r,_key:r.id}));
           dpRecords.sort((a,b)=> (a.fecha+a.turno).localeCompare(b.fecha+b.turno));
