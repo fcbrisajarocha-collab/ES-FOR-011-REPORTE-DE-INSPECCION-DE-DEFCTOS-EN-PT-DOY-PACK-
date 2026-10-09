@@ -284,7 +284,7 @@
         <button class="btn btn-ghost" id="btn-oee-config" style="padding:8px 14px;font-size:12px;">⚙ Configurar tasas ideales</button>
       </div>
       <div id="oee-config-panel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);">
-        <div class="field" style="max-width:240px;"><label>Horas efectivas por turno</label><input type="number" min="0" step="0.1" id="oee-horas-efectivas"></div>
+        <div class="field" style="max-width:240px;"><label>Horas efectivas por turno</label><div style="font-size:11px;color:var(--ink-soft);margin:-2px 0 5px;">8 h − 1 h limpieza y alimentos − 1 h comida = 6 h</div><input type="number" min="0" step="0.1" id="oee-horas-efectivas"></div>
         <label style="display:block;margin:14px 0 4px;font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Tasas ideales por presentación</label>
         <p class="panel-hint" style="margin:0 0 8px;">Captura la <b>velocidad nominal real</b> de la envasadora en pzas/min. Si la dejas vacía, se usa la tasa del sistema (valor de ejemplo).</p>
         <div class="grid-scroll" style="margin-bottom:12px;border:1px solid var(--line);border-radius:8px;">
@@ -1206,7 +1206,7 @@
     const filas = [
       ['sec','Tiempos'],
       ['Turnos con producción', fmt(turnosUnicos.size), 'Turnos distintos (fecha + turno) capturados en el período'],
-      ['Horas efectivas por turno', h(horasEfectivas), 'Configuración (⚙ Configurar tasas ideales)'],
+      ['Horas efectivas por turno', h(horasEfectivas), horasEfectivas===6 ? 'Turno de 8 h − 1 h limpieza y toma de alimentos − 1 h comida (paros planeados, no se capturan en Tiempos Perdidos)' : 'Configuración (⚙ Configurar tasas ideales)'],
       ['Tiempo programado', h(tiempoProgramado), 'Turnos × horas efectivas'],
       ['Tiempo perdido', h(tiempoPerdido) + ' · ' + Math.round(tiempoPerdido*60) + ' min', tiempos.length + ' paro(s) de Doy pack en Tiempos Perdidos'],
       ['Tiempo operativo', h(tiempoOperativo), 'Programado − perdido'],
